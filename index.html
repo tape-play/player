@@ -1765,7 +1765,7 @@ crossfadeToThisWindowButton.onclick = () =>   {
       equalizerOn: false,
       timeDisplayMode: 0, // 0 - consumed, 1 - remaining, 2 - duration, 3 - record
       secMinMode: 0,
-      compressorOn: true,
+      compressorOn: false,
       compressorThreshold: -24,
       compressorKnee: 30,
       compressorRatio: 12,
@@ -7138,7 +7138,7 @@ and think
       <div class="tableRow"><label style="width: 200px;" for="compThreshold">Threshold: <span id="compThresholdLabel">${globalSettings.compressorThreshold}</span>dB</label><input style="width:100%" type="range" id="compThreshold" min="-100" max="0" value="-24"></div>
       <div class="tableRow"><label style="width: 200px;" for="compKnee">Knee:       <span id="compKneeLabel">${globalSettings.compressorKnee}</span>dB</label><input style="width:100%" type="range" id="compKnee" min="0" max="40" value="30"></div>
       <div class="tableRow"><label style="width: 200px;" for="compRatio">Ratio:     <span id="compRatioLabel">${globalSettings.compressorRatio}</span></label><input style="width:100%" type="range" id="compRatio" min="1" max="20" value="12"></div>
-      <div class="tableRow"><label style="width: 200px;" for="compAttack">Attack:   <span id="compAttackLabel">${globalSettings.compressorAttack}</span>s</label><input style="width:100%" type="range" id="compAttack" min="0" max="1" step="0.01" value="0.003"></div>
+      <div class="tableRow"><label style="width: 200px;" for="compAttack">Attack:   <span id="compAttackLabel">${globalSettings.compressorAttack}</span>s</label><input style="width:100%" type="range" id="compAttack" min="0" max="1" step="0.001" value="0.003"></div>
       <div class="tableRow"><label style="width: 200px;" for="compRelease">Release: <span id="compReleaseLabel">${globalSettings.compressorRelease}</span>s</label><input style="width:100%" type="range" id="compRelease" min="0" max="1" step="0.01" value="0.25"></div>
 </div>
 
