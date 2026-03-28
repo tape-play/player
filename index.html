@@ -5425,7 +5425,7 @@ function updateTitleBar(info) {
     if(name.length > 26) {
       titleBarScrollTimeouts.push(setTimeout(function(){
       for (let i = 0; i < name.length-26; i++) {
-        titleBarScrollTimeouts.push(setTimeout(function(){titleEl.scrollBy(11,0)}, 125*i+1000));
+        titleBarScrollTimeouts.push(setTimeout(function(){titleEl.scrollBy(11,0)}, 125*i));
         titleBarScrollTimeouts.push(setTimeout(function() {
           titleEl.scrollTo(0,0)
         }, 1000+125*(name.length-26)));
