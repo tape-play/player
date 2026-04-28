@@ -1831,7 +1831,9 @@ crossfadeToThisWindowButton.onclick = () =>   {
         enableMonoMode: false,
         stereoEnhancerOn: false,
         stereoEnhancerDelay: -0.0025,
-        enableVideoAnalyserMode: false
+        enableVideoAnalyserMode: false,
+        ID3v1Encoding: 0,
+        skipDisplayUnsupportedSymbols: false
     };
     let multiJogFunctionList = {
       "prevNextTrack": {
@@ -2065,6 +2067,8 @@ if(localStorage.getItem('enableMonoMode') == null)                   {localStora
 if(localStorage.getItem('stereoEnhancerOn') == null)                 {localStorage.setItem('stereoEnhancerOn',                  String(Number(globalSettings.stereoEnhancerOn                )))};
 if(localStorage.getItem('stereoEnhancerDelay') == null)              {localStorage.setItem('stereoEnhancerDelay',                             globalSettings.stereoEnhancerDelay             )};
 if(localStorage.getItem('enableVideoAnalyserMode') == null)          {localStorage.setItem('enableVideoAnalyserMode',           String(Number(globalSettings.enableVideoAnalyserMode         )))};
+if(localStorage.getItem('ID3v1Encoding') == null)                    {localStorage.setItem('ID3v1Encoding',                                   globalSettings.ID3v1Encoding                   )};
+if(localStorage.getItem('skipDisplayUnsupportedSymbols') == null)    {localStorage.setItem('skipDisplayUnsupportedSymbols',     String(Number(globalSettings.skipDisplayUnsupportedSymbols   )))};
 
 globalSettings.repeatMode =                         Number(  localStorage.getItem('repeatMode'                      ));
 globalSettings.analyserMode =                       Number(  localStorage.getItem('analyserMode'                    ));
@@ -2101,6 +2105,8 @@ globalSettings.enableMonoMode =                   !!Number(  localStorage.getIte
 globalSettings.stereoEnhancerOn =                 !!Number(  localStorage.getItem('stereoEnhancerOn'                ));
 globalSettings.stereoEnhancerDelay =                Number(  localStorage.getItem('stereoEnhancerDelay'             ));
 globalSettings.enableVideoAnalyserMode =          !!Number(  localStorage.getItem('enableVideoAnalyserMode'         ));
+globalSettings.ID3v1Encoding =                      Number(  localStorage.getItem('ID3v1Encoding'                   ));
+globalSettings.skipDisplayUnsupportedSymbols =    !!Number(  localStorage.getItem('skipDisplayUnsupportedSymbols'   ));
 
     //recFormatSelect.querySelectorAll('option')[0].setAttribute('selected', 'true');
     /* if(localStorage.getItem('recFormat') == null) {
@@ -2461,7 +2467,7 @@ globalSettings.enableMonoMode ? monoChannelSplitter : inputLevelGain);
 
 try{
 (globalSettings.enableMonoMode ? monoChannelMerger :
-(globalSettings.stereoEnhancerOn ? delaySplitter :
+(globalSettings.stereoEnhancerOn ? delayMerger :
 (globalSettings.compressorOn ? compressor :
 (globalSettings.equalizerOn ? filters[filters.length-1] :
 (globalSettings.customSoundEffectOn ? customSoundEffect : sourceGain))))).connect(inputLevelGain);
@@ -3425,10 +3431,11 @@ function displayVolumeOnSpectrum() {
           let fr = new FileReader();
           fr.readAsDataURL(file);
           fr.onload = async function() {
-            await addTrack(file.name, fr.result, file.type);
+            let trackDur = await GetFileDuration(fr.result)
+            await addTrack(file.name, fr.result, file.type, {}, trackDur);
             if(i == files.length - 1) {
-          tracksDur = 0;
-          for (let i = 0; i < tracks.length; i++) {
+            tracksDur = trackDur;
+            for (let i = 0; i < tracks.length-1; i++) {
             //if (!/^data:audio\/mid/.test(tracks[i].url)) {
             tracksDur += await GetFileDuration(tracks[i].url);
             //}
@@ -3444,10 +3451,11 @@ function displayVolumeOnSpectrum() {
           
           let file_name = file.name;
           if(file.type == 'audio/mpeg') {
-          let addedTrackIndex = await addTrack(file_name, url1, file.type, {loading: true});
+          let trackDur = await GetFileDuration(url1);
+          let addedTrackIndex = await addTrack(file_name, url1, file.type, {loading: true}, trackDur);
           setTimeout(async ()=>{
-          let trackMetadata = await readID3(file, true, false);//file, cyrMode, readAllFile, forceEncoding, is16bitEncoding
-          if(trackMetadata['TIT2']) {
+          let trackMetadata = await readID3(file, !!globalSettings.ID3v1Encoding, false);//file, cyrMode, readAllFile, forceEncoding, is16bitEncoding
+/*           if(trackMetadata['TIT2']) {
             file_name = '';
             if(trackMetadata['TPE1']) {
               if(trackMetadata['TPE1'].value.length > 0) {
@@ -3457,29 +3465,20 @@ function displayVolumeOnSpectrum() {
             file_name += trackMetadata['TIT2'].value;
             tracks[addedTrackIndex].name = file_name;
             updateTitleBar();
-            };
+            }; */
             
             tracks[addedTrackIndex].metadata = trackMetadata || {};
-
-            if(ID3Window && !ID3Window.closed && addedTrackIndex == currentTrackIndex) {
-              ID3Window.ID3Table.innerHTML = '';
-              let trackMetadata = tracks[currentTrackIndex].metadata;
-              for (i in trackMetadata) {
-                if(i != 'ver' && i != 'loading') {
-                  if(i != 'APIC') {
-                    ID3Window.ID3Table.innerHTML += `<tr><td>${id3tagmarkers[i]||i}</td><td>${trackMetadata[i].value || trackMetadata[i][0]}</td></tr>`;
-                  } else {
-                    ID3Window.ID3Table.innerHTML += `<tr><td>${id3tagmarkers[i]||i}</td><td><img src="${URL.createObjectURL(new Blob([new Uint8Array(trackMetadata[i].value).buffer], { type: trackMetadata[i].mimeType }))}" style="max-width:200px"></td></tr>`;
-                  }
-                }
-              }
-              /* if(trackMetadata.loading) {
-                ID3Window.ID3Table.innerHTML = `<tr><td>loading...</td></tr>`;
-              } */
-              if(trackMetadata == null || trackMetadata == undefined || Object.keys(trackMetadata).length == 0) {
-                ID3Window.ID3Table.innerHTML = `<tr><td>no metadata found</td></tr>`;
-              }
+            let curArtist = Object.keys(tracks[addedTrackIndex].metadata).length > 0 ? (tracks[addedTrackIndex].metadata.loading ? '' : ((tracks[addedTrackIndex].metadata.TPE1 && typeof tracks[addedTrackIndex].metadata.TPE1 == 'object' ? tracks[addedTrackIndex].metadata.TPE1.value : tracks[addedTrackIndex].metadata.TPE1) || (tracks[addedTrackIndex].metadata.artist ? tracks[addedTrackIndex].metadata.artist : ''))) : '';
+            let curTitle =  Object.keys(tracks[addedTrackIndex].metadata).length > 0 ? (tracks[addedTrackIndex].metadata.loading ? tracks[addedTrackIndex].name : ((tracks[addedTrackIndex].metadata.TIT2 && typeof tracks[addedTrackIndex].metadata.TIT2 == 'object' ? tracks[addedTrackIndex].metadata.TIT2.value : tracks[addedTrackIndex].metadata.TIT2) || (tracks[addedTrackIndex].metadata.title ? tracks[addedTrackIndex].metadata.title : tracks[addedTrackIndex].name))) : tracks[addedTrackIndex].name;
+            if(playlistWindow) {
+              playlistWindow.document.body.querySelector('#list').querySelectorAll('tr')[addedTrackIndex+1].querySelector('td.artist').innerHTML = curArtist;
+              playlistWindow.document.body.querySelector('#list').querySelectorAll('tr')[addedTrackIndex+1].querySelector('td.title').innerHTML = curTitle;
+            }
+            if(trackMetadata['TIT2']) {
+              updateTitleBar();
             };
+
+            updateID3window();
           });
 /*           if(trackMetadata['APIC']) {
             window.im = new Image();
@@ -3498,20 +3497,19 @@ function displayVolumeOnSpectrum() {
           
           //await addTrack(file_name, url1, file.type, trackMetadata);
           if(i == files.length - 1) {
-          tracksDur = 0;
-          for (let i = 0; i < tracks.length; i++) {
+            tracksDur = trackDur;
+            for (let i = 0; i < tracks.length-1; i++) {
             //if (!/^data:audio\/mid/.test(tracks[i].url)) {
             tracksDur += await GetFileDuration(tracks[i].url);
             //}
           }
         }
       } else if(file.type == 'audio/flac' || file.type.includes('ogg') || file.type.includes('opus') || /\.(ogg|oga|opus|flac)$/i.test(file.name)) {
-
-
-          let addedTrackIndex = await addTrack(file_name, url1, file.type, {loading: true});
+          let trackDur = await GetFileDuration(url1);
+          let addedTrackIndex = await addTrack(file_name, url1, file.type, {loading: true}, trackDur);
           setTimeout(async ()=>{
             let trackMetadata = await readFLACOggMetadata(file);
-            if(trackMetadata['title']) {
+/*             if(trackMetadata['title']) {
               let file_name = '';
               if(trackMetadata['artist']) {
                 if(trackMetadata['title'].length > 0) {
@@ -3521,43 +3519,35 @@ function displayVolumeOnSpectrum() {
               file_name += trackMetadata['title'][0];
               tracks[addedTrackIndex].name = file_name;
               updateTitleBar();
-            };
+            }; */
             
             tracks[addedTrackIndex].metadata = trackMetadata || {};
-
-            if(ID3Window && !ID3Window.closed && addedTrackIndex == currentTrackIndex) {
-              ID3Window.ID3Table.innerHTML = '';
-              let trackMetadata = tracks[currentTrackIndex].metadata;
-              for (i in trackMetadata) {
-                if(i != 'ver' && i != 'loading') {
-                  if(i != 'APIC') {
-                    ID3Window.ID3Table.innerHTML += `<tr><td>${id3tagmarkers[i]||i}</td><td>${trackMetadata[i].value || trackMetadata[i][0]}</td></tr>`;
-                  } else {
-                    ID3Window.ID3Table.innerHTML += `<tr><td>${id3tagmarkers[i]||i}</td><td><img src="${URL.createObjectURL(new Blob([new Uint8Array(trackMetadata[i].value).buffer], { type: trackMetadata[i].mimeType }))}" style="max-width:200px"></td></tr>`;
-                  }
-                }
-              }
-              /* if(trackMetadata.loading) {
-                ID3Window.ID3Table.innerHTML = `<tr><td>loading...</td></tr>`;
-              } */
-              if(trackMetadata == null || trackMetadata == undefined || Object.keys(trackMetadata).length == 0) {
-                ID3Window.ID3Table.innerHTML = `<tr><td>no metadata found</td></tr>`;
-              }
+            let curArtist = Object.keys(tracks[addedTrackIndex].metadata).length > 0 ? (tracks[addedTrackIndex].metadata.loading ? '' : ((tracks[addedTrackIndex].metadata.TPE1 && typeof tracks[addedTrackIndex].metadata.TPE1 == 'object' ? tracks[addedTrackIndex].metadata.TPE1.value : tracks[addedTrackIndex].metadata.TPE1) || (tracks[addedTrackIndex].metadata.artist ? tracks[addedTrackIndex].metadata.artist : ''))) : '';
+            let curTitle =  Object.keys(tracks[addedTrackIndex].metadata).length > 0 ? (tracks[addedTrackIndex].metadata.loading ? tracks[addedTrackIndex].name : ((tracks[addedTrackIndex].metadata.TIT2 && typeof tracks[addedTrackIndex].metadata.TIT2 == 'object' ? tracks[addedTrackIndex].metadata.TIT2.value : tracks[addedTrackIndex].metadata.TIT2) || (tracks[addedTrackIndex].metadata.title ? tracks[addedTrackIndex].metadata.title : tracks[addedTrackIndex].name))) : tracks[addedTrackIndex].name;
+            if(playlistWindow) {
+              playlistWindow.document.body.querySelector('#list').querySelectorAll('tr')[addedTrackIndex+1].querySelector('td.artist').innerHTML = curArtist;
+              playlistWindow.document.body.querySelector('#list').querySelectorAll('tr')[addedTrackIndex+1].querySelector('td.title').innerHTML = curTitle;
+            }
+            if(trackMetadata['title']) {
+              updateTitleBar();
             };
+
+            updateID3window();
           });
           if(i == files.length - 1) {
-          tracksDur = 0;
-          for (let i = 0; i < tracks.length; i++) {
+          tracksDur = trackDur;
+          for (let i = 0; i < tracks.length-1; i++) {
             //if (!/^data:audio\/mid/.test(tracks[i].url)) {
             tracksDur += await GetFileDuration(tracks[i].url);
             //}
           }
         }
       } else if(file.type.includes('mp4') || file.type.includes('m4a')) {
-        let addedTrackIndex = await addTrack(file_name, url1, file.type, {loading: true});
+        let trackDur = await GetFileDuration(url1);
+        let addedTrackIndex = await addTrack(file_name, url1, file.type, {loading: true}, trackDur);
           setTimeout(async ()=>{
           let trackMetadata = await readMP4Metadata(file);
-          if(trackMetadata['TIT2']) {
+/*           if(trackMetadata['TIT2']) {
             file_name = '';
             if(trackMetadata['TPE1']) {
               if(trackMetadata['TPE1'].value.length > 0) {
@@ -3567,44 +3557,35 @@ function displayVolumeOnSpectrum() {
             file_name += trackMetadata['TIT2'].value;
             tracks[addedTrackIndex].name = file_name;
               updateTitleBar();
-            };
+            }; */
             
             tracks[addedTrackIndex].metadata = trackMetadata || {};
-
-            if(ID3Window && !ID3Window.closed && addedTrackIndex == currentTrackIndex) {
-              ID3Window.ID3Table.innerHTML = '';
-              let trackMetadata = tracks[currentTrackIndex].metadata;
-              for (i in trackMetadata) {
-                if(i != 'ver' && i != 'loading') {
-                  if(i != 'APIC') {
-                    ID3Window.ID3Table.innerHTML += `<tr><td>${id3tagmarkers[i]||i}</td><td>${trackMetadata[i].value || trackMetadata[i][0]}</td></tr>`;
-                  } else {
-                    ID3Window.ID3Table.innerHTML += `<tr><td>${id3tagmarkers[i]||i}</td><td><img src="${URL.createObjectURL(new Blob([new Uint8Array(trackMetadata[i].value).buffer], { type: trackMetadata[i].mimeType }))}" style="max-width:200px"></td></tr>`;
-                  }
-                }
-              }
-              /* if(trackMetadata.loading) {
-                ID3Window.ID3Table.innerHTML = `<tr><td>loading...</td></tr>`;
-              } */
-              if(trackMetadata == null || trackMetadata == undefined || Object.keys(trackMetadata).length == 0) {
-                ID3Window.ID3Table.innerHTML = `<tr><td>no metadata found</td></tr>`;
-              }
+            let curArtist = Object.keys(tracks[addedTrackIndex].metadata).length > 0 ? (tracks[addedTrackIndex].metadata.loading ? '' : ((tracks[addedTrackIndex].metadata.TPE1 && typeof tracks[addedTrackIndex].metadata.TPE1 == 'object' ? tracks[addedTrackIndex].metadata.TPE1.value : tracks[addedTrackIndex].metadata.TPE1) || (tracks[addedTrackIndex].metadata.artist ? tracks[addedTrackIndex].metadata.artist : ''))) : '';
+            let curTitle =  Object.keys(tracks[addedTrackIndex].metadata).length > 0 ? (tracks[addedTrackIndex].metadata.loading ? tracks[addedTrackIndex].name : ((tracks[addedTrackIndex].metadata.TIT2 && typeof tracks[addedTrackIndex].metadata.TIT2 == 'object' ? tracks[addedTrackIndex].metadata.TIT2.value : tracks[addedTrackIndex].metadata.TIT2) || (tracks[addedTrackIndex].metadata.title ? tracks[addedTrackIndex].metadata.title : tracks[addedTrackIndex].name))) : tracks[addedTrackIndex].name;
+            if(playlistWindow) {
+              playlistWindow.document.body.querySelector('#list').querySelectorAll('tr')[addedTrackIndex+1].querySelector('td.artist').innerHTML = curArtist;
+              playlistWindow.document.body.querySelector('#list').querySelectorAll('tr')[addedTrackIndex+1].querySelector('td.title').innerHTML = curTitle;
+            }
+            if(trackMetadata['TIT2']) {
+              updateTitleBar();
             };
+
+            updateID3window();
           });
           if(i == files.length - 1) {
-          tracksDur = 0;
-          for (let i = 0; i < tracks.length; i++) {
+          tracksDur = trackDur;
+          for (let i = 0; i < tracks.length-1; i++) {
             //if (!/^data:audio\/mid/.test(tracks[i].url)) {
             tracksDur += await GetFileDuration(tracks[i].url);
             //}
           }
         }
       } else {
-
-          await addTrack(file_name, url1, file.type);
-                  if(i == files.length - 1) {
-          tracksDur = 0;
-          for (let i = 0; i < tracks.length; i++) {
+          let trackDur = await GetFileDuration(url1);
+          await addTrack(file_name, url1, file.type, {}, trackDur);
+          if(i == files.length - 1) {
+          tracksDur = trackDur;
+          for (let i = 0; i < tracks.length-1; i++) {
             //if (!/^data:audio\/mid/.test(tracks[i].url)) {
             tracksDur += await GetFileDuration(tracks[i].url);
             //}
@@ -3809,7 +3790,7 @@ async function readID3(file, cyrMode, readAllFile, forceEncoding, is16bitEncodin
  
       let id3bytepointer = 10;
  
-      let id3v2json = {ver:[2,id3ver,id3subver]};
+      let id3v2json = {ver:[2,id3ver,id3subver], type: 'id3'};
  
       while(id3bytepointer < (readAllFile ? filebytesize-4 : id3length_dec+10)) {
 /*       if(id3bytepointer >= filebytesize-1) {
@@ -3930,6 +3911,7 @@ async function readID3(file, cyrMode, readAllFile, forceEncoding, is16bitEncodin
             let id3frameencoding = id3v2json[id3frame].encoding == 0 ? (cyrMode ? 'windows-1251' : 'ISO-8859-1') :
                                   (id3v2json[id3frame].encoding == 1 ? 'utf-16be' :
                                   (id3v2json[id3frame].encoding == 2 ? 'UTF-16be' : 'UTF-8'));
+            id3v2json[id3frame].binary = id3v2json[id3frame].value;
             let id3frameDecoder = new TextDecoder(forceEncoding ? forceEncoding : id3frameencoding, (!forceEncoding && id3v2json[id3frame].encoding == 2) ? {ignoreBOM: true} : {ignoreBOM: false});
             id3v2json[id3frame].value = id3frameDecoder.decode(new Uint16Array(id3v2json[id3frame].value)).replaceAll('\x00','');
           }
@@ -3937,7 +3919,7 @@ async function readID3(file, cyrMode, readAllFile, forceEncoding, is16bitEncodin
         resolve(id3v2json);
          
       } else if(id3v1tagstring == 'TAG') { // mp3 id3v1
-        let id3v1json = {ver:[1]};
+        let id3v1json = {ver:[1], type: 'id3'};
         id3bytepointer = filebytesize-125;
 
         let id3songname = [];
@@ -3981,10 +3963,10 @@ async function readID3(file, cyrMode, readAllFile, forceEncoding, is16bitEncodin
  
         let id3v1decoder = new TextDecoder(forceEncoding ? forceEncoding : (cyrMode ? 'windows-1251' : 'ISO-8859-1'));//ISO-8859-1, windows-1251
    
-        id3v1json['TPE1'] = {encoding:0, value: id3v1decoder.decode(new Uint16Array(id3artist)).replaceAll('\x00','')};
-        id3v1json['TIT2'] = {encoding:0, value: id3v1decoder.decode(new Uint16Array(id3songname)).replaceAll('\x00','')};
-        id3v1json['TALB'] = {encoding:0, value: id3v1decoder.decode(new Uint16Array(id3album)).replaceAll('\x00','')};
-        id3v1json['COMM'] = {encoding:0, value: id3v1decoder.decode(new Uint16Array(id3comment)).replaceAll('\x00','')};
+        id3v1json['TPE1'] = {encoding:0, binary: id3artist, value: id3v1decoder.decode(new Uint16Array(id3artist)).replaceAll('\x00','')};
+        id3v1json['TIT2'] = {encoding:0, binary: id3songname, value: id3v1decoder.decode(new Uint16Array(id3songname)).replaceAll('\x00','')};
+        id3v1json['TALB'] = {encoding:0, binary: id3album, value: id3v1decoder.decode(new Uint16Array(id3album)).replaceAll('\x00','')};
+        id3v1json['COMM'] = {encoding:0, binary: id3comment, value: id3v1decoder.decode(new Uint16Array(id3comment)).replaceAll('\x00','')};
        
         console.log(id3v1json);
 
@@ -4009,7 +3991,7 @@ async function readFLACOggMetadata(file) {
       
       try {
         let magic = String.fromCharCode(dataview.getUint8(0), dataview.getUint8(1), dataview.getUint8(2), dataview.getUint8(3));
-        let vc_json = {};
+        let vc_json = {type: 'vc'};
         let vc_decoder = new TextDecoder('utf-8');
 
         function parseVorbisComment(dv, ptr, length, targetObj) {
@@ -4166,7 +4148,7 @@ async function readMP4Metadata(file) {
     fr.onload = function() {
       let dataview = new DataView(fr.result);
       let filebytesize = fr.result.byteLength;
-      let json = {};
+      let json = {type: 'mp4'};
       let decoder = new TextDecoder('utf-8');
 
       function readBox(offset, maxOffset) {
@@ -4281,15 +4263,16 @@ function extractFilename(path) {
   }
 }
 
-    async function addTrack(name, url, type, metadata) {
+    async function addTrack(name, url, type, metadata, duration) {
       let oldLength = tracks.length;
-      tracks.push({ name, url, type, metadata });
+      tracks.push({ name, url, type, metadata, duration });
       if(playlistWindow) {
-        const li = playlistWindow.document.createElement('li');
+/*         const li = playlistWindow.document.createElement('li');
         li.textContent = name;
         li.style.padding = '5px 10px';
         li.style.cursor = 'pointer';
-        playlistWindow.document.querySelector('ol').appendChild(li);
+        playlistWindow.document.querySelector('#list').appendChild(li); */
+        addPlaylistRow(tracks[oldLength], oldLength);
       }
       //if (!(/^data:audio\/mid/.test(url))) {
         //tracksDur += await GetFileDuration(url);
@@ -4330,31 +4313,13 @@ function extractFilename(path) {
           //activeLi.style.fontWeight = '';
           activeLi.classList.remove('activeTrack');
         }
-        let li = playlistWindow.document.querySelectorAll('li')[index];
+        let li = playlistWindow.document.body.querySelector('#list').querySelectorAll('tr')[index+1];
         //li.style.backgroundColor = '#444';
         //li.style.fontWeight = 'bold';
         li.classList.add('activeTrack');
       }
-      if(ID3Window && !ID3Window.closed) {
-        ID3Window.ID3Table.innerHTML = '';
-        let trackMetadata = tracks[currentTrackIndex].metadata;
-        for (i in trackMetadata) {
-          if(i != 'ver' && i != 'loading') {
-            if(i != 'APIC') {
-              ID3Window.ID3Table.innerHTML += `<tr><td>${id3tagmarkers[i]||i}</td><td>${trackMetadata[i].value || trackMetadata[i][0]}</td></tr>`;
-            } else {
-              ID3Window.ID3Table.innerHTML += `<tr><td>${id3tagmarkers[i]||i}</td><td><img src="${URL.createObjectURL(new Blob([new Uint8Array(trackMetadata[i].value).buffer], { type: trackMetadata[i].mimeType }))}" style="max-width:200px"></td></tr>`;
-            }
-          }
-        }
-        if(trackMetadata.loading) {
-          ID3Window.ID3Table.innerHTML = `<tr><td>loading...</td></tr>`;
-        }
-        if(trackMetadata == null || trackMetadata == undefined || Object.keys(trackMetadata).length == 0) {
-          ID3Window.ID3Table.innerHTML = `<tr><td>no metadata found</td></tr>`;
-        }
-      };
-          if(tracks[currentTrackIndex].type.includes('image')) {
+      updateID3window();
+      if(tracks[currentTrackIndex].type.includes('image')) {
       let tmp_img = new Image();
       tmp_img.src = tracks[currentTrackIndex].url;
       //if(videoWindow && !videoWindow.closed) {
@@ -5403,7 +5368,14 @@ let titleBarScrollTimeouts = [];
 function updateTitleBar(info) {
   const titleEl = document.getElementById('titleBar');
   const track = tracks[currentTrackIndex];
-  const name = track ? track.name : "No track";
+  let artistTitle = ''
+  if(track) {
+    let curArtist = Object.keys(track.metadata).length > 0 ? (track.metadata.loading ? null : ((track.metadata.TPE1 && typeof track.metadata.TPE1 == 'object' ? track.metadata.TPE1.value : track.metadata.TPE1) || (track.metadata.artist ? track.metadata.artist : null))) : null;
+    let curTitle =  Object.keys(track.metadata).length > 0 ? (track.metadata.loading ? track.name : ((track.metadata.TIT2 && typeof track.metadata.TIT2 == 'object' ? track.metadata.TIT2.value : track.metadata.TIT2) || (track.metadata.title ? track.metadata.title : track.name))) : track.name;
+    artistTitle = curArtist ? curArtist + ' - ' : '';
+    artistTitle += curTitle;
+  }
+  let name = track ? artistTitle : "No track";
   titleBarScrollTimeouts.forEach(function(t){clearTimeout(t)});
   if(info) {
     clearTimeout(titleBarTimeout);
@@ -5434,7 +5406,7 @@ function updateTitleBar(info) {
     } else {
       titleEl.innerHTML = `${renderTitleBar(name)}`;
     }
-    document.head.querySelector('title').innerHTML = state > 0 ? (track?track.name:"        ㅤ"):"        ㅤ";
+    document.head.querySelector('title').innerHTML = state > 0 ? (track?artistTitle:"        ㅤ"):"        ㅤ";
   }
   if(miniWindow) {updateMiniwindowTitleBar(info)}
   // titleEl.textContent = `${name} | ${info}`;
@@ -5451,8 +5423,10 @@ let symbolPositions = {"10":{"x":-280,"y":-171},"32":{"x":-280,"y":-171},"33":{"
 function renderTitleBar(text) {
   let resultChars = '';
   for (let i = 0; i < text.length; i++) {
-    resultChars += `<span class="character" style="background-position: ${(symbolPositions[text[i].toString().charCodeAt(0)] || {x:-280}).x}px ${(symbolPositions[text[i].toString().charCodeAt(0)] || {y:-171}).y}px"></span>`
-    //console.log(text[i]);
+    if(symbolPositions[text[i].toString().charCodeAt(0)] || !globalSettings.skipDisplayUnsupportedSymbols) {
+      resultChars += `<span class="character" style="background-position: ${(symbolPositions[text[i].toString().charCodeAt(0)] || {x:-280}).x}px ${(symbolPositions[text[i].toString().charCodeAt(0)] || {y:-171}).y}px"></span>`
+    }
+        //console.log(text[i]);
   };
   return resultChars;
 };
@@ -5710,7 +5684,7 @@ document.getElementById('plButton').addEventListener('click', function() {
     playlistWindow = null;
   } else {
     // Open playlist window
-    playlistWindow = window.open('', 'Playlist', 'width=300,height=400,scrollbars=yes,resizable=yes');
+    playlistWindow = window.open('', 'Playlist', 'width=600,height=400,scrollbars=yes,resizable=yes');
 
     // Write basic HTML structure
     playlistWindow.document.title = 'Playlist';
@@ -5729,32 +5703,79 @@ document.getElementById('plButton').addEventListener('click', function() {
       background-color: #444;
       font-weight = bold;
     }
+    #list td, #list th {
+        padding-top: 4px;
+        padding-bottom: 4px;
+    }
+    #list td:not(:first-child):not(:last-child), #list th:not(:first-child):not(:last-child) {
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+    #list td:first-child, #list th:first-child {
+        padding-right: 12px;
+    }
+    #list td:last-child, #list th:last-child {
+        padding-left: 12px;
+    }
+    #list {
+      border-spacing: 0px;
+      text-align: left;
+    }
+    #list td.index {
+      text-align: right
+    }
 </style>`;
 
-    const heading = playlistWindow.document.createElement('h2');
+
+/*     const heading = playlistWindow.document.createElement('h2');
     heading.textContent = 'Playlist';
-    playlistWindow.document.body.appendChild(heading);
-
-    const list = playlistWindow.document.createElement('ol');
-    list.style.listStyleType = 'none';
-    list.style.padding = '0';
-
+    playlistWindow.document.body.appendChild(heading); */
+    playlistWindow.document.body.innerHTML = `
+    <table id="list" style="padding: 0">
+      <tr id="list_header"><th style="text-align: right">#</th><th>Artist</th><th>Title</th><th>Duration</th></tr>
+    </table>
+    `;
+    //let list = playlistWindow.document.body.list;
+/*     list.style.listStyleType = 'none';
+    list.style.padding = '0'; */
+/*     if(tracks.length == 0) {
+      playlistWindow.document.body.noTracks.style.display = '';
+    } */
     // Add tracks as list items
     tracks.forEach(function(track, index) {
-      const li = playlistWindow.document.createElement('li');
-      li.textContent = track.name;
-      li.style.padding = '5px 10px';
-      li.style.cursor = 'pointer';
+      addPlaylistRow(track,index);
+    });
+
+    //playlistWindow.document.body.appendChild(list);
+
+    // Focus the playlist window
+    playlistWindow.focus();
+
+    // When playlist window is closed manually, reset variable
+    playlistWindow.onbeforeunload = function() {
+      playlistWindow = null;
+    };
+  }
+});
+function addPlaylistRow(track, index) {
+      let playlistRow = playlistWindow.document.createElement('tr');
+      if(track.metadata.loading) {
+        playlistRow.innerHTML = `<td class="index">${index+1}</td><td class="artist"></td><td class="title">loading...</td><td class="duration">${`${Math.floor(track.duration/60).toString().padStart(2, '0')}:${Math.floor(track.duration-Math.floor(track.duration/60)*60).toString().padStart(2, '0')}`/*  || '--:--' */}</td>`;
+      } else {
+        playlistRow.innerHTML = `<td class="index">${index+1}</td><td class="artist">${Object.keys(track.metadata).length > 0 ? (track.metadata.loading ? '' : ((track.metadata.TPE1 && typeof track.metadata.TPE1 == 'object' ? track.metadata.TPE1.value : track.metadata.TPE1) || (track.metadata.artist ? track.metadata.artist : ''))) : ''}</td><td class="title">${Object.keys(track.metadata).length > 0 ? (track.metadata.loading ? track.name : ((track.metadata.TIT2 && typeof track.metadata.TIT2 == 'object' ? track.metadata.TIT2.value : track.metadata.TIT2) || (track.metadata.title ? track.metadata.title : track.name))) : track.name}</td><td class="duration">${`${Math.floor(track.duration/60).toString().padStart(2, '0')}:${Math.floor(track.duration-Math.floor(track.duration/60)*60).toString().padStart(2, '0')}`/*  || '--:--' */}</td>`;
+      }
+      playlistRow.style.padding = '5px 10px';
+      playlistRow.style.cursor = 'pointer';
 
       // Highlight currently playing track
       if (index === currentTrackIndex) {
         /*li.style.backgroundColor = '#444';
         li.style.fontWeight = 'bold';*/
-        li.className = 'activeTrack';
+        playlistRow.className = 'activeTrack';
       }
 
       // Click to load and play track
-      li.addEventListener('dblclick', function() {
+      playlistRow.addEventListener('dblclick', function() {
         //if (window.opener) {
         currentTrackIndex = index;
           /* window.opener. */loadTrack(index);
@@ -5767,21 +5788,8 @@ document.getElementById('plButton').addEventListener('click', function() {
         playlistWindow = null; */
       });
 
-      list.appendChild(li);
-    });
-
-    playlistWindow.document.body.appendChild(list);
-
-    // Focus the playlist window
-    playlistWindow.focus();
-
-    // When playlist window is closed manually, reset variable
-    playlistWindow.onbeforeunload = function() {
-      playlistWindow = null;
-    };
-  }
-});
-
+      playlistWindow.document.body.querySelector('#list').append(playlistRow);
+}
 
 
 
@@ -5999,7 +6007,10 @@ display:inline-block;
 margin-top:-8px;
 }*/
 #presetNameLabel{height:32px;}
-</style></head><body><div id="controls"><input type="checkbox" id="enableEqualizer"><!--<label for="enableEqualizer">EQ on</label>--><div id="rightButtons"><div id="presetNameInptGroup"><label for="presetNameInput" id="presetNameLabel">Enter preset name: </label><input id="presetNameInput" type="text"></div><button id="savePresetBtn"></button><button id="loadPresetBtn">Load</button><button id="deletePresetBtn"></button><select id="eqPresetsSelect"></select></div></div><div class="equalizer" id="eqBars"><input type="range" min="-40" max="40" value="0" title="Preamp" style="margin-right: 32px;" id="preampBar"><span class="barLabel" style="transform: translate(-38.5px,216px) rotate(45deg)">P</span><span class="barLabel levelLabel" style="transform: translate(-38.5px,230px)">0</span>`;
+</style>
+</head>
+<body>
+  <div id="controls"><input type="checkbox" id="enableEqualizer"><!--<label for="enableEqualizer">EQ on</label>--><div id="rightButtons"><div id="presetNameInptGroup"><label for="presetNameInput" id="presetNameLabel">Enter preset name: </label><input id="presetNameInput" type="text"></div><button id="savePresetBtn"></button><button id="loadPresetBtn">Load</button><button id="deletePresetBtn"></button><select id="eqPresetsSelect"></select></div></div><div class="equalizer" id="eqBars"><input type="range" min="-40" max="40" value="0" title="Preamp" style="margin-right: 32px;" id="preampBar"><span class="barLabel" style="transform: translate(-38.5px,216px) rotate(45deg)">P</span><span class="barLabel levelLabel" style="transform: translate(-38.5px,230px)">0</span>`;
 
     // Add range inputs
     filters.forEach(function(filter, index) {
@@ -6901,7 +6912,14 @@ let miniWindowTitleBarScrollTimeouts = [];
 function updateMiniwindowTitleBar(info) {
   const titleEl = miniWindow.document.getElementById('titleBar');
   const track = tracks[currentTrackIndex];
-  const name = track ? track.name : "No track";
+  let artistTitle = ''
+  if(track) {
+    let curArtist = Object.keys(track.metadata).length > 0 ? (track.metadata.loading ? null : ((track.metadata.TPE1 && typeof track.metadata.TPE1 == 'object' ? track.metadata.TPE1.value : track.metadata.TPE1) || (track.metadata.artist ? track.metadata.artist : null))) : null;
+    let curTitle =  Object.keys(track.metadata).length > 0 ? (track.metadata.loading ? track.name : ((track.metadata.TIT2 && typeof track.metadata.TIT2 == 'object' ? track.metadata.TIT2.value : track.metadata.TIT2) || (track.metadata.title ? track.metadata.title: track.name))) : track.name;
+    artistTitle = curArtist ? curArtist + ' - ' : '';
+    artistTitle += curTitle;
+  }
+  let name = track ? artistTitle : "No track";
   miniWindowTitleBarScrollTimeouts.forEach(function(t){clearTimeout(t)});
   if(info) {
     clearTimeout(miniWindowTitleBarTimeout);
@@ -6932,7 +6950,7 @@ function updateMiniwindowTitleBar(info) {
     } else {
       titleEl.innerHTML = `${renderTitleBar(name)}`;
     }
-    miniWindow.document.title = state > 0 ? (track?track.name:"        ㅤ"):"        ㅤ";
+    miniWindow.document.title = state > 0 ? (track?artistTitle:"        ㅤ"):"        ㅤ";
   }
   // titleEl.textContent = `${name} | ${info}`;
 };
@@ -7195,6 +7213,13 @@ VHS
   <input type="checkbox" id="disableSpectrumWhenSpectrogramOnCheckbox"><label for="disableSpectrumWhenSpectrogramOnCheckbox">Disable spectrum when spectrogram is displayed</label>
   <br>
   <input type="checkbox" id="enableVideoAnalyserMode"><label for="enableVideoAnalyserMode">Add video as spectrum mode</label>
+  <br>
+  <label for="ID3v1EncodingSelect">ID3 non-unicode encoding: </label><select id="ID3v1EncodingSelect">
+    <option value="0">ISO-8859-1 (latin)</option>
+    <option value="1">Windows-1251 (cyryllic)</option>
+  </select>
+  <br>
+  <input type="checkbox" id="skipDisplayUnsupportedSymbolsCheckbox"><label for="skipDisplayUnsupportedSymbolsCheckbox">If symbol is not supported by display font, skip it instead of showing space</label>
   </div>
 <div class="settingsContent">
 <input type="checkbox" id="enableCustomSoundEffect"><label for="enableCustomSoundEffect"> Enable custom sound effect</label><br>
@@ -7541,9 +7566,41 @@ settingsWindow.enableVideoAnalyserMode.oninput = () => {
   }
 }
 
+      settingsWindow.ID3v1EncodingSelect.querySelector(`option[value="${globalSettings.ID3v1Encoding}"]`).setAttribute('selected', 'true');
+      settingsWindow.document.getElementById('ID3v1EncodingSelect').addEventListener('input', getSelectedID3v1Encoding);
+      function getSelectedID3v1Encoding(event) {
+        localStorage.setItem('ID3v1Encoding', String(Number(this.value)));
+        globalSettings.ID3v1Encoding = Number(this.value);
+        this.setAttribute('selected', 'true');
+        for (let i = 0; i < tracks.length; i++) {
+          if(Object.keys(tracks[i].metadata).length > 0) {
+            if(tracks[i].metadata.type == 'id3') {
+              let id3v1decoder = new TextDecoder(!!globalSettings.ID3v1Encoding ? 'windows-1251' : 'ISO-8859-1');//ISO-8859-1, windows-1251
+              for (let key in tracks[i].metadata) {
+                if(tracks[i].metadata[key].encoding == 0) {
+                  tracks[i].metadata[key].value = id3v1decoder.decode(new Uint16Array(tracks[i].metadata[key].binary)).replaceAll('\x00','');
+                }
+                /* tracks[i].metadata['TIT2'].value = id3v1decoder.decode(new Uint16Array(tracks[i].metadata['TIT2'].binary)).replaceAll('\x00','');
+                tracks[i].metadata['TALB'].value = id3v1decoder.decode(new Uint16Array(tracks[i].metadata['TALB'].binary)).replaceAll('\x00','');
+                tracks[i].metadata['COMM'].value = id3v1decoder.decode(new Uint16Array(tracks[i].metadata['COMM'].binary)).replaceAll('\x00',''); */
+              }
+              if(playlistWindow) {
+                playlistWindow.document.body.querySelector('#list').querySelectorAll('.title')[i].innerHTML = tracks[i].metadata['TIT2'].value;
+                playlistWindow.document.body.querySelector('#list').querySelectorAll('.artist')[i].innerHTML = tracks[i].metadata['TPE1'].value;
+              }
+              updateTitleBar();
+            }
+          }
+        }
+      };
 
+settingsWindow.skipDisplayUnsupportedSymbolsCheckbox.checked = globalSettings.skipDisplayUnsupportedSymbols;
 
-
+settingsWindow.skipDisplayUnsupportedSymbolsCheckbox.oninput = () => {
+  globalSettings.skipDisplayUnsupportedSymbols = settingsWindow.skipDisplayUnsupportedSymbolsCheckbox.checked;
+  localStorage.setItem('skipDisplayUnsupportedSymbols', String(Number(globalSettings.skipDisplayUnsupportedSymbols)));
+  updateTitleBar();
+}
 
 
 
@@ -7716,22 +7773,7 @@ ID3Window = window.open('', 'ID3', 'width=480,height=480,scrollbars=yes,resizabl
 ID3Window.document.write(iHTML);
 ID3Window.document.title = 'ID3';
 
-let trackMetadata = tracks[currentTrackIndex] ? tracks[currentTrackIndex].metadata : {};
-for (i in trackMetadata) {
-  if(i != 'ver') {
-    if(i != 'APIC') {
-      ID3Window.ID3Table.innerHTML += `<tr><td>${id3tagmarkers[i]||i}</td><td>${trackMetadata[i].value || trackMetadata[i][0]}</td></tr>`;
-    } else {
-      ID3Window.ID3Table.innerHTML += `<tr><td>${id3tagmarkers[i]||i}</td><td><img src="${URL.createObjectURL(new Blob([new Uint8Array(trackMetadata[i].value).buffer], { type: trackMetadata[i].mimeType }))}" style="max-width:200px"></td></tr>`;
-    }
-  }
-}
-if(trackMetadata.loading) {
-  ID3Window.ID3Table.innerHTML = `<tr><td>loading...</td></tr>`;
-}
-if(trackMetadata == null || trackMetadata == undefined || Object.keys(trackMetadata).length == 0) {
-  ID3Window.ID3Table.innerHTML = `<tr><td>no metadata found</td></tr>`;
-}
+    updateID3window();
 
     // Focus the ID3 window
     ID3Window.focus();
@@ -7744,7 +7786,100 @@ if(trackMetadata == null || trackMetadata == undefined || Object.keys(trackMetad
   
 });
 
+/*
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$XpwmmUZOmmOOOOZZqmZmmmmmmZOmLZZmwmOZZmmZOQ0OmmmmmmZOZmZZZZmpmmmqO; >IlJmOmm0OC$$$$$$$$$$$$$$$$$$$$$d$$$$$$$$$$u$$$
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$*vdmZQbCOZOLJ000)+JZZZZZOOOOOZc0ZwZ0OZZO00OJjO0OZOO0YQOZZmZOOOZwOOmZn <;>CzZwqO0C$$$$$$$$$$$$$$$$$$kO$$$Mh$$$$uM$o$$$
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$WtbwmzxwdQJOOZU00OY]_-+<zZO00ZpcJZZ000O00UU0ZXBtU0OOOOOrQOZO0Z0O0OmZO0OO>!,[Q$vOmOLX$$$$$$$$$$$$$$k($$$$$M1$$$jB$$$$a@$$
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$JJqww(h$$wXqZt00Ov0OwZO00U|__[QOJUjO00JO0CJUw0O)@$Jcc0ZmZO)OUzOO0O00Q00ZLO000<:))oq$vmZ_$$8$$$b{O$$$$$W}z$$$$$$x$$$$$oO$$$$$
+$$$$$$$$$$$$$$$$$$$$$$$$$$mXJZdvrztcwB$$$$$$$XmOnmOOQC0ZO0QJ0O000mw@xOZJQ0Qn&8QZQU$$$$0$JZmOvqOrdZ0OCO0QCL0Z0Q00OUI)%kou$#0w<h$$$Wu$$$$$$$$$$$$Yv$$$$$XW$$$$$$$$
+$$$$$$$$$$$$$$$$$$$$$t$$$$$$$$$$$$$$$$$$$$$8QZ0cZ00O|0000Q0O000Od$WvZUmLX$$WZQYa$$$$$z$$xOZ]$0)W#Lc0ZJ00CX00Oc00OOt!$Y$U$$*dwb-qo$L$$$WpdBQ[)mdM$$$$$$$QB$$$$$$$
+$$$$$$$$$$B$$$$$$$$$$O0-$$$$$$$$$$$$$$$$$$uZOvLZ0zJOQ00OQL0Q000$@qQJZx8$$kXq*$$$$$$$B$$Zm0d$$zXULWUZwcQLJU000OUOO00~$)@mB$$Jmwwpwmxi|a$$$B*U(xZaadwL($$$$$a$$$$,
+$$$$$$$$$$$$$$$#cULYzJa$oz0Ucunxz8$$$$$$$-mOnY0xQ00x0Q00C0Q0u<m@rtOcbu"1W&$$$$$$$$$$$$Mr@$$xd%cQW%YU[0cUX0Q000cO0O0n$$Lz$$$mm0nmwwwqdddppbdCft0M$$$$$$$$$nv$$tfQ
+$$$$$$$$$$$$$$$$$$$$Xtu0QQQLLLLQLLQQCf()(nnLnYxQ0QLYQ000J0Lf$@1|JpCCC|&$c$$$$$$$$$$$$kM$*$$jUC0$nJx-%z)CvL000OQXOO00c$$[mqCxmmqLB$$$$$$$$$$$$$$$$$$$$$$$*0<f0)v$
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$dQr(|vYQLUJnmQJcQQQcOQ00QCJ0x$-jX$$$YXL?b@@$$$$$$$$$$h$$$$$&U0c$$$nX[Y*xJUQ0Q0Q0xZmO0_J$$hmJ$$YwmwwQv$$$$$$$$$$$$$$$$$$$%U/pw;$$$
+$$$$$$$$$$$$$$$$$$$$$$$&bYY/v$$$JfQww0UuCQQCCcQQQJQp000JQ00a8<zL$$$ZUQ)$$$$$$$$$$$$$$$$$$$JXLJ$$kXU1@&uY0J0cQCLXt0ZO}*#$$hwO%$BYZZZmmZC(0$$$$$$$$$$$$$|Lk*YJ$$$$
+$$$$$$$$$$$$$$$$$$$$$$$MZxzQL0Z0QQQJXCJJLLLcJ0OQ0/w0Y00UO0O$m$|JCddJCx*$$$$$$$$$$$$$$$$$$$$+UQcaCLcB$zUZQJ010QJCYj00(8Y$$$nZmu$$wUZOOZOZmmZc[Q&%M0zqqmwbuW$$$$$$
+$$$$$$$$$$$$$$$$$$]xq$$$$$$$$$mZ0CJjM$$$$$jLwQQOtO0XLO0UOOZB$$$%*x}bm$$$$$$$$$$$$$$$$$$$$$$$$0{_J$$$$zO0UOLLQUU0QXz0YaBL$$$_mqLd$$fmZdqZOOOOOmmZmZZmqUUm@$$a$$$$
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$pwm00QLvQOQQQXv00LvOOOY0ZQU$$$$$$B$$$$$$$$$$$$$q#$$$$$$$$$$$$$W$$$$j00Qz0xLQ|jL0Q}LQZ%BX$$$cLmwv*$$YQ0QmpdqmOZmmOvLQ$$$$$$$$$$$
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$xCO0QQZU000O[0OZOzJ0Lw$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$U0m0rLL[QQ{fJ00QXOcqJO!$$$LzY0qn8$$#LmO000mwwOcnJ@$$$$$$$$$$$
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$oCO0QQQX000OZtQOZmQn|OJJU$$$$$$$$$$$$$$*UrZbddbbQJ8$$$$$$$$$$$ncxm0(0(z0LnJ]C000$$Jj8$$'$$O&$$@%_h$&0+tXJn)}tnUCCL001r%$$$$$
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$%Y000QQnzQ00xUtOOwqLUClCw^Ca$$$$$$$$$$$$ubbbdbddbdddddv$$$$$$$$[~wdq/cLcZO}&o$MWu}:htq#Jm#$<$mk$$%Z$$t$$$$]$$$$$$$$$$$$$@fO$$$
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$%O+c0Z0mYuOO0fr$wcZZ0COBXCQca"z~$$$$$$$$$$$8kbdbbbbbbddpppnB$$$$$b/B+dq/tQ&)Z0j8&$$$$$$$$$$$$Wup?~QJ$$c$$$$Y$$$$&x$$$$$$$$$$$$$B$$
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$00ICQULY$@wL|0$$$@zZ0tBO$%0Umhhx X/%$$$$$$$$$$zbdddbbbbdddqpO$$$$$v@%tJpxbX@%zwL*a$$$$$$$$bBbx~z$$$)8Bl$$$$$$$$c$$$$$n$$$$$$$$$$$$$$
+$$$$$$$$$$$$$$$$$$$$$$$$$$B|ZOO0$$$$(*$$<v8$$jZf$$$$Qq81w$-ql./"^!B$$$$$$$8bbdbbbdddqppww$$$W$$B>Cd,Bw@$BCw<#%$$$$-haB$$$$$$$j$$n$$k$$$$$$$$$L$$$$$$$$$$$$$$$$$$
+$$$$$$$$$$$$$$$$$$$$$$$$h)u{dd$$$O$$$$X$$$$$Xj@$$$$$$JO(mBhk}n-_  "-}O$$$$$$dQbddppdd1k$$$$$Ll^ mzM$$M$$@Y[UwObW$$h$$$$$$$$$$$$wU$$$@@$$$$$$$$C$$$$$$$$$$$$$$$$$
+$$$$$$$$$$$$$$$$$$$$$1tB$$L$$$$$$$$$$)@$$$$]$$$$$$$$$$CnO@%|z*0ri.   -[]+c$$$$$$$$$$$$$$&fI"^,[c&$$$W@$&JjYBB%%$$&%$$$$$$$$$$$$$dW$$$d$$$$$$$$$m$$$$($$$$$$$$$$$
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$@rak$$$k%$$$$$$$$$$$$#_$$8/w$&UU`'I     <l;`q$$$$$q .I"";}mvZ$$$$$QMc#$wn$$$$$W$d$$$$$$$$$$$$$8Q$$$$($$$$$$$$p$$MQ$$$$$$$$$$$$
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$j$$z&$$$O$$$$$$$$$$$$$$$X$$#n]$$$Mh#`"I>l    ,i`.^`i+l^'.Y$$_$$$$$$a)%$$$w)$$$$BM$$$$of$$$$$$$$$$ic&CBt]C%$$$$$|$$$$$$$$$$$$$$$$
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$-$$$$$$($$$$$$$$$$$$$$$*M$$$d$$$&th$$$$O$w:";li>+---_++<l;'c$$$O$$$$$&ok$$$$$%o$$$$$$$$$$$$$$bw$$$$$$BJcL$$$$$I#$$$$$$$$$$$$$$$$$$$$
+$$$$$$$$$$$$$$$$$$$$$$$$$$"$$$$$$$$$$$$$$$$$$m*$$$$$$$M$$$$$$$nkM$$<!U$o" ";!!~+++>!I?*$$MMo$$$$&%$$$$$$$$Q$$$$$$$$$$$$$$$$,$$$$$$$$$$$$$$%pd$$$$$$$$$$$$$$$$$$$
+$$$$$$$$$$$$$$$$$$$$$$$$)$$$$$$$$$$$$$$$$$dO$$$$$$$$$$$o$$$$$$$$$W$bQ$$$$$@&_} !!;I:U$$$$IpZv$$*$k$$$$$$$$c$$$$$%$$$$$$$$$$$$1$$$$$$$$$$$$$*t$$$$$$$$$$$$$$$$$$$
+$$$$$$$$$$$$$$$$$$$$zjJ$$$$$$$$$$$$$$$cp$t$$$$$$$$$$$$$%$$$$$$$$$$U]O8o$$$$$['<<<<<~$$$$$$$[/h$$$$B$$$$$$$$$$$$$$$$$$$$$$$$$$$$Xz$$$$$$$$$$$Bh$$$$$$$$$$$$$$$$$$
+$$$$$$$$$$$$$$$$$nQ$%#$$$$$$$$$$$$$Y#$nh$$$$$$$$$$$$$$$$$$$$$$$$$>@$W$$daB#i ~~~<~~<$$$$$$oYmn$$$$$$$$$$$$$$$$$$$$$$$$$$@$$$$$$$$$>Z/$$$$$$$$/&t($$$$$$$$$$$$$$$
+$$$$$$$$$$$$$u)$$$$$$$$$$$$$$$$$OO$uh$$$$$$$$$$$$$$$$p$$$$$$$$$vr$$$$$$$Bn :+~>>><~_B$$$$' ^|J&$$$$$a$$$$$$$$$$$$$$$$$$w$$$$$$$$$$}$$$)$$$$$$?$$$$$$v$$$$$$$$$$$
+$$$$$$$$$$$Q$$$$$$M$$$$$$$$$$nZ$OU$$$$$$$$$$$$$$*Zo$d$$$$$$$$m_B$$$$$$$o}.,~<<<><~~+<+)#$:   ]-$$$$$B$$$$$$$$$$$$$0%$$$0$$$$$$$$$$$$Qb$$m0$$$aa$$$$$$<$$$$$$$$$$
+$$$$$$$/h*$$$$$$$$$$$$$$$$$$v$B$$$$$$$$$$$$$$$Ua$$@$$$$$$$$$zp$$$$$$$$$).`Ii>>>><<~~~~~~< '   wlk$$$$M$om$W(xWx$$$$$j$$m$$$$$$$$$$$$$$$t$$MU$$$$$$$$$$|a$$$$$$$$
+$$$$+$$$$$$$$$$$$$$$$$$$$W-$$$$$b$$$$$$$$$$$$U$$$$ $$$w$$$>:a$$$k$$$$$f' ;li>>><<><! !~~+~!.  "Wq t$$$~$Q:Wu)'$$$$$$$$$%L<W$$$$$$$$$$$$$$n$$$J$$$$$$$$$J}$$$$$$$
+Mx$$$$$$$$$$$$$$$$$$$$$b#$$$$$$$$$$$$0$$$$$B$$$$mm~$$kC$/BC$JU$$$$$$$O^ "^i>>>><<:!>ii>;'i>;   ]$$$dZY$[f$<Y $;zQQx($$$$$$$r$$$$$$$$$$$$$$$8X$*x$$$$$$$$$$O0$$$$
+$$$$$$$$$$$$$$$$$%0$$$$$$$$$$$$$$$ko$$$$$$$$$rLOn-M$$q$x#mO)$$$$$$$$$_ 'll >><<<,!<>>>il^`>>`   O$$$$$c):$J%l0c}Q0u|zn}B$$$$mU$$$$$$$$$$$$$$$h%z$$$$$$$$$$$$$vW$
+$$$$$$$$$$$$$$$/h)$$$$$$$$$$$$$$Q@$$$$$$$$nQ0~zO)$$$c$ZZC$a$t8$$$$$$<' ,i>>I<<>i,~~<<<>il";>i``'1B$$$$$$Jhz0p$$WC$$mLuu0c+$$$$$$Uv$$$$$$$$$$$$$$$|$$$$$$$$$$$$$$
 
+$>       >(nzYYzzcvur)xnvcvxuJMhXnnucvvvccnjtfnnnzUcxrx[v0zxrftf}l   ($$Bo( [-;-
+"I;"` ^{nxvzcvuvuvz|_Yd0vvvYdpu1[>>fccunnnxnxfxccYLQXnx}]Xw0ujrj(i.  p$$$*> |M~:
+!-((fJUnjunnuxnvzz}f0X{)vc0Zu?l)t_xnvnxxxxxxxfXwCCLOLXut~uC#oJnxrfi  %$$$#'  z*i
+*bZn1|xvvruxfxunj])f_/vcXXnx[I|xl(vcvxfjxnxjrffpwJUXzcvn_nvO$%Ouxrji M$$$B~  ;C0
+mXf((jvni,,i[t/1+l)Cj1f1n_}t-ix_~ucvxf[)xLnftt|ckUYvxtunirucw$&Jxrr/;m$$$$Q   [c
+czcuuv)>_I,!!>>_]qY>.";[_-un<]t.jzvxxj!<zbjxxjttqUvnvn~_,--rvbBbujjr~-$$$$Wl  lf
+czXzvn_lfjf[+I /w)!,  ;j<fJf:(?lccrrr|,-wwtjvnrffQft(uv[.1/<|uqdcfff("0$$$$J   )
+UCUcnj;?jnnfr[UJ?~,}/ t)<cx/I}'-vt}1/[,(pc)xuntt~0r|[}]j-+(j<<tUYftttl"h$$$a   }
+JXcux/:|rjxr[Lt>`IQdn,z-Ij|)^-"|j(?<|I>nQ/tcvt?],(z1-l^I)f[1ri"tvxftf] "*$$W'  +
+Xzuvc[]trvu/1|l,uM@%/>ni'/(- ll(|(}?}I1YufxJr+l_!ln}< t[`)/_|1;irrfffjl xB$$,  <
+cnuzu>txYzzi<!,O&$$*]>_  1{>. ;()(<}?{xnjxXC+l>Lm+j-l'Cq'`[[:11.-rrjjx} |d$$,  _
+uruzt{xunt?.-;a$$$$$[+'{"!]^  ~1{}!+}jxrtuZx;]o@a))iI_M8X`:__~f_.)rxrx1 xO&$;  <
+f|nc{jnx}l`l<%$$$$$%[`~&0.!um >}}!_>fjj//Qtl}$$Bh|` .xdpC_ ^!]!x~:txjr('JwaM,  ]
+(}cx_nj|:^'!ch0kdqbh} L$$YlM8! ]<li}tf)?n)lQ$$$8*>''1$$$$h^ ,t[-xl~rjt"[$B&b!!I?
+}1v11n/~        <];   W$$$@$$*;,_;?|f};?I>8$$$@%Z''!@$$$$Bu ,x{,[} -f),`C$%J,}"<
+~}r_rx--'`' _%$$x[tx-  )B$$$$$k  ,??"`;"X$$$$$%#>,(jxUc(<JJ  (>'-r"'|tt)i^;^+}`-
+"(n)u1}-I:`L$$WlQU?+kW /,b$$$$$p ".;X)Z$$$$%Ut"'             I >Ci(.)jfjrr>l{~ )
+Icxrxi|_?>_B$$}/c.   /~w$h$$$$B)^lp$$$$$$$$$[ :[w&~.xm0Uwv~    _Z>/l(nxj|f<_1< v
+!Jrr{_t]1I-$$$c|u"^  )]m$$$$$h_m$$$$$$$$$$oiC$$$$^}Qn;   <WU    (itl1xxx(t<<j/ *
+"Orx;+t}(,}$$$$<cz  :L;@$$$W[*$$$$$$$$$$$$$$$$$$0 Un,     [Z"  :)_U]1nxff/^[n("$
+:mjr{;|1/I1$$$$-"rUQC;Q$$$$$$$$$$$$$$$$$$$$$$$$$k Cn<     )J'} q_[bI{jft/[^(n?!$
+;Lnx1:-ft<_$$$$$$$#0Jo$$$$$$$$$$$$$$$$$$$$$$$$$$$t"Czr,'"(0{xbXBirJ.)tttt[,tx"-$
+}Yzr{";vj?'M$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$W[t! "|xvv-]&$$$p>O< |ttju_>jf t$
+/rLj{,,zx[.f$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$MCxb$$$$8[1J "tjxxnl{x| v$
+?xUr|" tv1,,@$$$$$$$$$$$$$z%$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$t,(: >rzxn?;(x['b8
+:ftUt` >cf! }$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$v :`'I[XU}<.I)x,/h*
+`r}vt  ,[v]" lY$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$j  . ,ixZ-(^ lt/ Qka
+"]}_f,l"Ijf:  :"~0$$$$$$$$$qM$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$[     :|QZ[^  if^+kao
+>`{-_<[~"ix}   :^   >zB$$$$$$%W$B0xQ$$$$$$$$$$$$$$$$$$$$b?   ./ `]Yq:!+  ]} C*MM
+"{/f)`l/?"xu_   :.     .,n%$$$$$$$$$$$$$$$$$$$$$$$WmX)[     lw ,}vm[W1   }.iM8%W
+`}xx(}.+_! frl >l,>,   ^^ "'!C$$$$$$$$$$$$$Bmx?-.!W$$%^+M? }o."/Lvx$B    , b$$$#
+Ituj|> '?-!'r|` <_" ."' , `^    >zxff-i[rZW$$$$$, ;:`<@B^ [8I!up}8$$n     z$$$$U
+
+*/
+
+function updateID3window() {
+  if(ID3Window && !ID3Window.closed) {
+    ID3Window.ID3Table.innerHTML = '';
+    let trackMetadata = tracks[currentTrackIndex] ? tracks[currentTrackIndex].metadata : {}
+    for (i in trackMetadata) {
+      if(i != 'ver' && i != 'loading' && i != 'type') {
+        if(i != 'APIC') {
+          ID3Window.ID3Table.innerHTML += `<tr><td>${id3tagmarkers[i]||i}</td><td>${trackMetadata[i].value || trackMetadata[i][0]}</td></tr>`;
+        } else {
+          ID3Window.ID3Table.innerHTML += `<tr><td>${id3tagmarkers[i]||i}</td><td><img src="${URL.createObjectURL(new Blob([new Uint8Array(trackMetadata[i].value).buffer], { type: trackMetadata[i].mimeType }))}" style="max-width:200px"></td></tr>`;
+        }
+      }
+    }
+    if(trackMetadata.loading) {
+      ID3Window.ID3Table.innerHTML = `<tr><td>loading...</td></tr>`;
+    }
+    if(trackMetadata == null || trackMetadata == undefined || Object.keys(trackMetadata).length == 0) {
+      ID3Window.ID3Table.innerHTML = `<tr><td>no metadata found</td></tr>`;
+    }
+  };
+}
 
 
 
