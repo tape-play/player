@@ -10,11 +10,11 @@ Features:
 - Some audio effects, such as audio compressor (anti-clipping), simple stereo enhancer, and even programmable custom sound effect (audioWorkletNode)
 - Glitchy auto search, which rewinds/fast forwards to the nearest silence. Allows you to skip tracks in long audio files
 - Different timer modes: consumed, remaining, duration and record, which can be displayed as min:sec, seconds or x10 sec
-- Visualiser with NORMAL (spectrum), BASS (shows bass level), LEVEL (shows audio volume level), stereo VU meter and stereo difference modes with -10dB, 0dB and +10dB maximum levels
-- Timer with visualiser in favicon
-- Spectrogram visualiser in a separate window
-- Knobs, which are touch-compatible. MULTI JOG can be assigned as volume knob or rewind/fast forward
+- Visualizer with NORMAL (spectrum), BASS (shows bass level), LEVEL (shows audio volume level), stereo VU meter and stereo difference modes with ability to set minimum and maximum levels
+- Timer and visualizer in favicon
+- Some visualizations, in a separate window
+- Touch-compatible knobs. MULTI JOG can be assigned as volume or rewind/fast forward knob
 - Media metadata parser and viewer. Currently supported formats: MP3, MP4, M4A, FLAC, Ogg, Opus
 - And something else
 
-v1.2 (28.04.2026)
+v1.3 (10.05.2026)
