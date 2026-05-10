@@ -27,6 +27,9 @@ window.globalBorderSrc = "border.png";
       /*--cbuttons: url("textures/cbuttons.bmp");control buttons*/
       /*--wbuttons: url("textures/eqpl.png");window buttons*/
     }
+    /** {
+      outline:#f00 1px solid;  
+    }*/
     body {
       font-family: Arial, sans-serif;
       padding: 20px;
@@ -478,7 +481,7 @@ window.globalBorderSrc = "border.png";
       margin: 0;
       padding: 0;
       margin-left: -4px;
-      margin-bottom: -7px;
+      margin-bottom: -23px;
     }
     #displayControls button {
       background: var(--textures);
@@ -545,7 +548,20 @@ window.globalBorderSrc = "border.png";
     #analyserMaxBtn.activeBtn:active {
       background-position: -128px -432px !important;
     }
-            
+
+    #analyserMinBtn {
+      background-position: -1060px -96px !important;
+    }
+    #analyserMinBtn:active {
+      background-position: -1060px -112px !important;
+    }
+    #analyserMinBtn.activeBtn {
+      background-position: -1060px -128px !important;
+    }
+    #analyserMinBtn.activeBtn:active {
+      background-position: -1060px -144px !important;
+    }
+
     #repeatModeBtn {
       background-position: -96px -384px !important;
     }
@@ -631,6 +647,7 @@ window.globalBorderSrc = "border.png";
     #titleBar {
       font-weight: bold; font-size: 16px; margin: 0px; height: 16px;margin-left: 42px;margin-top:10px;margin-bottom:15px;
       width: 286px;overflow: hidden;/*overflow-x: auto;*/
+      touch-action: none;
 
     }
     #titleBar::-webkit-scrollbar {
@@ -815,6 +832,7 @@ window.globalBorderSrc = "border.png";
     <button id="timerModeBtn"></button>
     <button id="secMinBtn"></button>
     <button id="analyserModeBtn"></button>
+    <button id="analyserMinBtn"></button>
     <button id="analyserMaxBtn"></button>
     <button id="analyserFpsBtn"></button>
     <button id="repeatModeBtn"></button>
@@ -874,14 +892,14 @@ window.globalBorderSrc = "border.png";
       </div>
 
       <div class="knobContainer">
-        <div id="bassKnob" class="knob1" style="transform: rotate(-135deg);">
+        <div id="bassKnob" class="knob1" style="transform: rotate(0deg);">
           <div class="knob1inside" style="transform: rotate(135deg);"></div>
         </div>
         <span class="controlLabel" style="width:56px; text-align: center;">BASS</span>
       </div>
 
       <div class="knobContainer">
-        <div id="trebleKnob" class="knob1" style="transform: rotate(-135deg);">
+        <div id="trebleKnob" class="knob1" style="transform: rotate(0deg);">
           <div class="knob1inside" style="transform: rotate(135deg);"></div>
         </div>
         <span class="controlLabel" style="width:56px; text-align: center;">TREBLE</span>
@@ -1225,23 +1243,23 @@ speedKnob.querySelector('.knob1inside').style.transform = 'rotate(' + (-((1-0.25
 
 
 bassKnob.onpointerdown = function (evt1) {
-  let knobAngleInfo = getKnobAngle(bassKnob,{x:evt1.clientX, y:evt1.clientY},-135,135,0,15,0.1);
+  let knobAngleInfo = getKnobAngle(bassKnob,{x:evt1.clientX, y:evt1.clientY},-135,135,-15,15,0.1);
   bassKnob.style.transform = 'rotate(' + (knobAngleInfo.degrees)+'deg)';
   bassKnob.querySelector('.knob1inside').style.transform = 'rotate(' + (-knobAngleInfo.degrees)+'deg)';
   document.documentElement.addEventListener('pointermove', handlebassKnobRotation);
   bassFilter.gain.value = knobAngleInfo.value;
-  bassFilterGain.gain.value = Math.pow(10, (-knobAngleInfo.value) / 20);
+  bassFilterGain.gain.value = Math.min(Math.pow(10, (-knobAngleInfo.value) / 20), 1);
   bassFilter.gain.value = parseFloat((bassFilter.gain.value).toFixed(1));
   globalSettings.bass = parseFloat((knobAngleInfo.value).toFixed(1));
   updateTitleBar(`Bass: ${parseFloat((bassFilter.gain.value).toFixed(1))} dB`);
 };
 document.documentElement.addEventListener('pointerup', function(){document.documentElement.removeEventListener('pointermove', handlebassKnobRotation)})
 function handlebassKnobRotation(evt) {
-  let knobAngleInfo = getKnobAngle(bassKnob,{x:evt.clientX, y:evt.clientY},-135,135,0,15,0.1);
+  let knobAngleInfo = getKnobAngle(bassKnob,{x:evt.clientX, y:evt.clientY},-135,135,-15,15,0.1);
   bassKnob.style.transform = 'rotate(' + (knobAngleInfo.degrees)+'deg)';
   bassKnob.querySelector('.knob1inside').style.transform = 'rotate(' + (-knobAngleInfo.degrees)+'deg)';
   bassFilter.gain.value = knobAngleInfo.value;
-  bassFilterGain.gain.value = Math.pow(10, (-knobAngleInfo.value) / 20);
+  bassFilterGain.gain.value = Math.min(Math.pow(10, (-knobAngleInfo.value) / 20), 1);
 
   bassFilter.gain.value = parseFloat((bassFilter.gain.value).toFixed(1));
   globalSettings.bass = parseFloat((knobAngleInfo.value).toFixed(1));
@@ -1253,23 +1271,23 @@ bassKnob.onwheel = function(e) {
   if(e.deltaX > 0 || e.deltaY > 0) {
     if(bassFilter.gain.value < 15) {
       bassFilter.gain.value+=0.1;
-      bassFilterGain.gain.value = Math.pow(10, (-bassFilter.gain.value) / 20);
+      bassFilterGain.gain.value = Math.min(Math.pow(10, (-parseFloat((bassFilter.gain.value).toFixed(1))) / 20), 1);
 
       bassFilter.gain.value = parseFloat((bassFilter.gain.value).toFixed(1));
       globalSettings.bass = parseFloat((globalSettings.bass+0.1).toFixed(1));
 
-      let valueConvertedToAngle = bassFilter.gain.value/15*270-135;
+      let valueConvertedToAngle = bassFilter.gain.value/15*135;
       bassKnob.style.transform = 'rotate(' +valueConvertedToAngle+'deg)';
       bassKnob.querySelector('.knob1inside').style.transform = 'rotate(' + (-valueConvertedToAngle)+'deg)';
       updateTitleBar(`Bass: ${parseFloat((bassFilter.gain.value).toFixed(1))} dB`);
     }
   } else if(e.deltaX < 0 || e.deltaY < 0) {
-    if(bassFilter.gain.value > 0) {
+    if(bassFilter.gain.value > -15) {
       bassFilter.gain.value-=0.1;
-      bassFilterGain.gain.value = Math.pow(10, (-bassFilter.gain.value) / 20);
+      bassFilterGain.gain.value = Math.min(Math.pow(10, (-parseFloat((bassFilter.gain.value).toFixed(1))) / 20), 1);
       bassFilter.gain.value = parseFloat((bassFilter.gain.value).toFixed(1));
       globalSettings.bass = parseFloat((globalSettings.bass-0.1).toFixed(1));
-      let valueConvertedToAngle = bassFilter.gain.value/15*270-135;
+      let valueConvertedToAngle = bassFilter.gain.value/15*135;
       bassKnob.style.transform = 'rotate(' +valueConvertedToAngle+'deg)';
       bassKnob.querySelector('.knob1inside').style.transform = 'rotate(' + (-valueConvertedToAngle)+'deg)';
       updateTitleBar(`Bass: ${parseFloat((bassFilter.gain.value).toFixed(1))} dB`);
@@ -1280,7 +1298,7 @@ bassKnob.onwheel = function(e) {
 
 
 trebleKnob.onpointerdown = function (evt1) {
-  let knobAngleInfo = getKnobAngle(trebleKnob,{x:evt1.clientX, y:evt1.clientY},-135,135,0,15,0.1);
+  let knobAngleInfo = getKnobAngle(trebleKnob,{x:evt1.clientX, y:evt1.clientY},-135,135,-15,15,0.1);
   trebleKnob.style.transform = 'rotate(' + (knobAngleInfo.degrees)+'deg)';
   trebleKnob.querySelector('.knob1inside').style.transform = 'rotate(' + (-knobAngleInfo.degrees)+'deg)';
   document.documentElement.addEventListener('pointermove', handletrebleKnobRotation);
@@ -1295,7 +1313,7 @@ trebleKnob.ondragstart = function() {
 };
 document.documentElement.addEventListener('pointerup', function(){document.documentElement.removeEventListener('pointermove', handletrebleKnobRotation)})
 function handletrebleKnobRotation(evt) {
-  let knobAngleInfo = getKnobAngle(trebleKnob,{x:evt.clientX, y:evt.clientY},-135,135,0,15,0.1);
+  let knobAngleInfo = getKnobAngle(trebleKnob,{x:evt.clientX, y:evt.clientY},-135,135,-15,15,0.1);
   trebleKnob.style.transform = 'rotate(' + (knobAngleInfo.degrees)+'deg)';
   trebleKnob.querySelector('.knob1inside').style.transform = 'rotate(' + (-knobAngleInfo.degrees)+'deg)';
   trebleFilter.gain.value = knobAngleInfo.value;
@@ -1315,18 +1333,18 @@ trebleKnob.onwheel = function(e) {
 
       trebleFilter.gain.value = parseFloat((trebleFilter.gain.value).toFixed(1));
       globalSettings.treble = parseFloat((globalSettings.bass+0.1).toFixed(1));
-      let valueConvertedToAngle = trebleFilter.gain.value/15*270-135;
+      let valueConvertedToAngle = trebleFilter.gain.value/15*135;
       trebleKnob.style.transform = 'rotate(' +valueConvertedToAngle+'deg)';
       trebleKnob.querySelector('.knob1inside').style.transform = 'rotate(' + (-valueConvertedToAngle)+'deg)';
       updateTitleBar(`Treble: ${parseFloat((trebleFilter.gain.value).toFixed(1))} dB`);
     }
   } else if(e.deltaX < 0 || e.deltaY < 0) {
-    if(trebleFilter.gain.value > 0) {
+    if(trebleFilter.gain.value > -15) {
       trebleFilter.gain.value-=0.1;
       //trebleFilterGain.gain.value = Math.pow(10, (-trebleFilter.gain.value) / 20);
       trebleFilter.gain.value = parseFloat((trebleFilter.gain.value).toFixed(1));
       globalSettings.treble = parseFloat((globalSettings.bass+0.1).toFixed(1));
-      let valueConvertedToAngle = trebleFilter.gain.value/15*270-135;
+      let valueConvertedToAngle = trebleFilter.gain.value/15*135;
       trebleKnob.style.transform = 'rotate(' +valueConvertedToAngle+'deg)';
       trebleKnob.querySelector('.knob1inside').style.transform = 'rotate(' + (-valueConvertedToAngle)+'deg)';
       updateTitleBar(`Treble: ${parseFloat((trebleFilter.gain.value).toFixed(1))} dB`);
@@ -1501,7 +1519,8 @@ and think
     <button id="openSecondWindow">Open second window</button><br>
     <button id="crossfadeToSecondWindowButton">Crossfade to second window</button><br>
     <button id="crossfadeToThisWindowButton">Crossfade to this window</button><br>
-    <label for="crossfadeLengthInput">Crossfade length, ms: </label><input type="number" id="crossfadeLengthInput" value="5000">
+    <label for="crossfadeLengthInput">Crossfade length, ms: </label><input type="number" id="crossfadeLengthInput" value="5000"><br>
+    <input type="checkbox" id="crossfadeNextTrack"><label for="crossfadeNextTrack"> Crossfade tracks (second window required)</label>
 
     <!-- </div> --><br>
     <script>
@@ -1647,21 +1666,34 @@ openSecondWindow.onclick = () => {
     secondWnd = null;
   } else {
     secondWnd = window.open('about:blank','','width=800,height=600');
-    secondWnd.document.write('<!doctype html>'+document.documentElement.outerHTML);
+    secondWnd.document.write('<!doctype html>'+/* document.documentElement.outerHTML */windowOuterHTML);
     secondWnd.onbeforeunload = () => {
       secondWnd.close();
       secondWnd = null;
-    }
+    };
+    //secondWnd.onload = () => {
+      secondWnd.reconnectEffects();
+      //secondWnd.alert();
+    //}
   }
 };
-
-function crossFade(secondWindow, len, dir){
-    (dir?secondWindow:window).playButton.click();
+let windowOuterHTML = '';
+document.addEventListener('DOMContentLoaded', () => {
+    windowOuterHTML = document.documentElement.outerHTML;
+}, {once:true});
+function crossFade(secondWnd, len, dir, pauseAfterCrossfade){
+    (dir?secondWnd:window).playButton.click();
     for(let i=0;i<100;i++){
       setTimeout(()=>{
-        (dir?secondWindow.volumeKnob.onwheel:volumeKnob.onwheel)({deltaX:1,preventDefault:()=>{}});
-        (dir?volumeKnob.onwheel:secondWindow.volumeKnob.onwheel)({deltaX:-1,preventDefault:()=>{}});
-      }, len/100*i)
+        (dir?secondWnd.volumeKnob.onwheel:volumeKnob.onwheel)({deltaX:1,preventDefault:()=>{}});
+        (dir?volumeKnob.onwheel:secondWnd.volumeKnob.onwheel)({deltaX:-1,preventDefault:()=>{}});
+      }, len/100*i);
+    };
+    if(pauseAfterCrossfade){
+      setTimeout(()=>{
+        (dir?window:secondWnd).pauseButton.click();
+        (dir?window:secondWnd).audio.currentTime = 0;
+      }, len+1000);
     }
 };
 
@@ -1681,6 +1713,28 @@ crossfadeToThisWindowButton.onclick = () =>   {
     crossFade(secondWnd, Number(crossfadeLengthInput.value), false);
   }
 }
+let audioCurrentTimeInterval;
+let nowPlayingWindow = 0;
+crossfadeNextTrack.oninput = () => {
+  if(crossfadeNextTrack.checked) {
+    audioCurrentTimeInterval = setInterval(() => {
+      if(nowPlayingWindow == 0) {
+        if((audio.duration-audio.currentTime) < Number(crossfadeLengthInput.value)/1000) {
+          crossFade(secondWnd, Number(crossfadeLengthInput.value), true, true);
+          nowPlayingWindow = 1;
+        }
+      } else if(nowPlayingWindow == 1) {
+        if((secondWnd.audio.duration-secondWnd.audio.currentTime) < Number(crossfadeLengthInput.value)/1000) {
+          crossFade(secondWnd, Number(crossfadeLengthInput.value), false, true);
+          nowPlayingWindow = 0;
+        }
+      }
+    }, 0);
+  } else {
+    clearInterval(audioCurrentTimeInterval);
+  }
+}
+
 </script>
 
   </div>
@@ -1748,6 +1802,7 @@ crossfadeToThisWindowButton.onclick = () =>   {
     window.globalSettings = {
       repeatMode: 1,
       analyserMode: 1,
+      analyserMinMode: 3,
       analyserMaxMode: 1,
       analyserFps: 1,
       analyserMonitorMode: 1, // 0 - source, 1 - record, 2 - output
@@ -1772,6 +1827,7 @@ crossfadeToThisWindowButton.onclick = () =>   {
       compressorAttack: 0.003,
       compressorRelease: 0.25,
       multiJogFunction: 'prevNextTrack',
+      multiJogShiftFunction: 'rewFf1sec',
       volume: 1,
       balance: 0,
       recLevel: 1,
@@ -2030,12 +2086,13 @@ crossfadeToThisWindowButton.onclick = () =>   {
 //let customSoundEffectCode =;
 let customSoundEffectId = 0;
 
-
+let analyserMinDecibelsValues = [-120, -100, -75, -50, -35, -25];
 
 if(localStorage.getItem('repeatMode') == null)                       {localStorage.setItem('repeatMode',                                      globalSettings.repeatMode                      )};
 if(localStorage.getItem('analyserMode') == null)                     {localStorage.setItem('analyserMode',                                    globalSettings.analyserMode                    )};
 if(localStorage.getItem('eqpresets_list') == null)                   {localStorage.setItem('eqpresets_list',                   JSON.stringify(eqpresets_list                                 ))};
 if(localStorage.getItem('equalizerOn') == null)                      {localStorage.setItem('equalizerOn',                       String(Number(globalSettings.equalizerOn                     )))};
+if(localStorage.getItem('analyserMinMode') == null)                  {localStorage.setItem('analyserMinMode',                                 globalSettings.analyserMinMode                 )};
 if(localStorage.getItem('analyserMaxMode') == null)                  {localStorage.setItem('analyserMaxMode',                                 globalSettings.analyserMaxMode                 )};
 if(localStorage.getItem('analyserMonitorMode') == null)              {localStorage.setItem('analyserMonitorMode',                             globalSettings.analyserMonitorMode             )};
 if(localStorage.getItem('recFormat') == null)                        {localStorage.setItem('recFormat',                                       globalSettings.recFormat                       )};
@@ -2051,6 +2108,7 @@ if(localStorage.getItem('midiSmootherSound') == null)                {localStora
 if(localStorage.getItem('autoSearchSilenceLength') == null)          {localStorage.setItem('autoSearchSilenceLength',                         globalSettings.autoSearchSilenceLength         )};
 if(localStorage.getItem('autoSearchThreshold') == null)              {localStorage.setItem('autoSearchThreshold',                             globalSettings.autoSearchThreshold             )};
 if(localStorage.getItem('multiJogFunction') == null)                 {localStorage.setItem('multiJogFunction',                                globalSettings.multiJogFunction                )};
+if(localStorage.getItem('multiJogShiftFunction') == null)            {localStorage.setItem('multiJogShiftFunction',                           globalSettings.multiJogShiftFunction           )};
 if(localStorage.getItem('secMinMode')==null)                         {localStorage.setItem('secMinMode',                                      globalSettings.secMinMode                      )};
 if(localStorage.getItem('timeDisplayMode') == null)                  {localStorage.setItem('timeDisplayMode',                                 globalSettings.timeDisplayMode                 )};
 if(localStorage.getItem('compOn') == null)                           {localStorage.setItem('compOn',                            String(Number(globalSettings.compressorOn                    )))};
@@ -2074,6 +2132,7 @@ globalSettings.repeatMode =                         Number(  localStorage.getIte
 globalSettings.analyserMode =                       Number(  localStorage.getItem('analyserMode'                    ));
 eqpresets_list =                                  JSON.parse(localStorage.getItem('eqpresets_list'                  ));
 globalSettings.equalizerOn =                      !!Number(  localStorage.getItem('equalizerOn'                     ));
+globalSettings.analyserMinMode =                    Number(  localStorage.getItem('analyserMinMode'                 ));
 globalSettings.analyserMaxMode =                    Number(  localStorage.getItem('analyserMaxMode'                 ));
 globalSettings.analyserMonitorMode =                Number(  localStorage.getItem('analyserMonitorMode'             ));
 globalSettings.recFormat =                                   localStorage.getItem('recFormat'                       );
@@ -2089,6 +2148,7 @@ globalSettings.midiSmootherSound =                !!Number(  localStorage.getIte
 globalSettings.autoSearchSilenceLength =            Number(  localStorage.getItem('autoSearchSilenceLength'         ));
 globalSettings.autoSearchThreshold =                Number(  localStorage.getItem('autoSearchThreshold'             ));
 globalSettings.multiJogFunction =                            localStorage.getItem('multiJogFunction'                );
+globalSettings.multiJogShiftFunction =                       localStorage.getItem('multiJogShiftFunction'           );
 globalSettings.secMinMode =                         Number(  localStorage.getItem('secMinMode'                      ));
 globalSettings.timeDisplayMode =                    Number(  localStorage.getItem('timeDisplayMode'                 ));
 globalSettings.compressorOn =                     !!Number(  localStorage.getItem('compOn'                          ));
@@ -2183,8 +2243,8 @@ const analyser = context.createAnalyser();
 const recordAnalyser = context.createAnalyser();
 const inputAnalyser = context.createAnalyser();
 
-analyser.minDecibels = recordAnalyser.minDecibels = inputAnalyser.minDecibels = -50;
 analyser.maxDecibels = recordAnalyser.maxDecibels = inputAnalyser.maxDecibels = globalSettings.analyserMaxMode*10;
+analyser.minDecibels = recordAnalyser.minDecibels = inputAnalyser.minDecibels = analyserMinDecibelsValues[globalSettings.analyserMinMode]; // -50
 analyser.smoothingTimeConstant = recordAnalyser.smoothingTimeConstant = inputAnalyser.smoothingTimeConstant = 0.25;
 analyser.fftSize = recordAnalyser.fftSize = inputAnalyser.fftSize = 1024; // 32
 
@@ -2196,8 +2256,8 @@ const bassAnalyser = context.createAnalyser();
 const recordBassAnalyser = context.createAnalyser();
 const inputBassAnalyser = context.createAnalyser();
 
-bassAnalyser.minDecibels = recordBassAnalyser.minDecibels = inputBassAnalyser.minDecibels = -50;
 bassAnalyser.maxDecibels = recordBassAnalyser.maxDecibels = inputBassAnalyser.maxDecibels = globalSettings.analyserMaxMode*10;
+bassAnalyser.minDecibels = recordBassAnalyser.minDecibels = inputBassAnalyser.minDecibels = analyserMinDecibelsValues[globalSettings.analyserMinMode]; // -50
 bassAnalyser.smoothingTimeConstant = recordBassAnalyser.smoothingTimeConstant = inputBassAnalyser.smoothingTimeConstant = 0.25;
 bassAnalyser.fftSize = inputBassAnalyser.fftSize = recordBassAnalyser.fftSize = 256;
 
@@ -2212,8 +2272,8 @@ const recordRightAnalyser = context.createAnalyser();
 const inputLeftAnalyser = context.createAnalyser();
 const inputRightAnalyser = context.createAnalyser();
 
-leftAnalyser.minDecibels = inputLeftAnalyser.minDecibels = recordLeftAnalyser.minDecibels = rightAnalyser.minDecibels = inputRightAnalyser.minDecibels = recordRightAnalyser.minDecibels = -50;
 leftAnalyser.maxDecibels = inputLeftAnalyser.maxDecibels = recordLeftAnalyser.maxDecibels = rightAnalyser.maxDecibels = inputRightAnalyser.maxDecibels = recordRightAnalyser.maxDecibels = 0;
+leftAnalyser.minDecibels = inputLeftAnalyser.minDecibels = recordLeftAnalyser.minDecibels = rightAnalyser.minDecibels = inputRightAnalyser.minDecibels = recordRightAnalyser.minDecibels = analyserMinDecibelsValues[globalSettings.analyserMinMode]; // -50
 leftAnalyser.smoothingTimeConstant = inputLeftAnalyser.smoothingTimeConstant = recordLeftAnalyser.smoothingTimeConstant = rightAnalyser.smoothingTimeConstant = inputRightAnalyser.smoothingTimeConstant = recordRightAnalyser.smoothingTimeConstant = 0;//0.25
 leftAnalyser.fftSize = inputLeftAnalyser.fftSize = recordLeftAnalyser.fftSize = rightAnalyser.fftSize = inputRightAnalyser.fftSize = recordRightAnalyser.fftSize = 32;
 
@@ -2372,6 +2432,8 @@ let customSoundEffect;
         recordLeftAnalyser.maxDecibels = -10;
         recordRightAnalyser.maxDecibels = -10;
       }
+
+      analyser.minDecibels = bassAnalyser.minDecibels = leftAnalyser.minDecibels = rightAnalyser.minDecibels = inputAnalyser.minDecibels = inputBassAnalyser.minDecibels = inputLeftAnalyser.minDecibels = inputRightAnalyser.minDecibels = recordAnalyser.minDecibels = recordBassAnalyser.minDecibels = recordLeftAnalyser.minDecibels = recordRightAnalyser.minDecibels = analyserMinDecibelsValues[globalSettings.analyserMinMode];
     /* } */
 
 /*if(equalizerOn) {
@@ -4655,7 +4717,8 @@ function pauseAudio() {
     tmp_audio.preload = 'metadata';
     async function GetFileDuration(url) {
 
-      return new Promise(function(resolve) {
+      return new Promise(function(resolve, reject) {
+      try {
       if(/^data:audio\/mid/.test(url)) {//alert();
         let tmpMidResult = MidiParser.parse(url);
         let tmpMidiTempo = 500000;
@@ -4688,8 +4751,13 @@ function pauseAudio() {
             resolve(tmp_audio.duration);
           }
         }, {once:true});
+        tmp_audio.addEventListener("error", function() {
+          resolve(0);
+        });
       }
-
+      } catch(e) {
+        resolve(0);
+      }
       });
     }
     async function stopAudio() {
@@ -5022,6 +5090,9 @@ function pauseAudio() {
 let multiJogFwdAction = multiJogFunctionList[globalSettings.multiJogFunction].fwdAction;
 let multiJogRevAction = multiJogFunctionList[globalSettings.multiJogFunction].revAction;
 
+let multiJogShiftFwdAction = multiJogFunctionList[globalSettings.multiJogShiftFunction].fwdAction;
+let multiJogShiftRevAction = multiJogFunctionList[globalSettings.multiJogShiftFunction].revAction;
+
 let multiJogKnobRotation = 0; //element.style.transform.slice(7).parseFloat()
 multiJogKnob.onpointerdown = function (evt1) {
   document.documentElement.addEventListener('pointermove', handleMultiJogKnobRotation);
@@ -5033,10 +5104,18 @@ function handleMultiJogKnobRotation(evt) {
   let knobAngleInfo0 = getInfiniteKnobAngle(multiJogKnob,{x:evt.clientX, y:evt.clientY},25,0,1);
   if(knobAngleInfo.value >= 1) {
     multiJogKnobRotation = knobAngleInfo0.degrees;//alert();
-    multiJogFwdAction();
+    if(evt.shiftKey) {
+      multiJogShiftFwdAction();
+    } else {
+      multiJogFwdAction();
+    }
   } else if(knobAngleInfo.value <= -1) {
     multiJogKnobRotation = knobAngleInfo0.degrees;
-    multiJogRevAction();
+    if(evt.shiftKey) {
+      multiJogShiftRevAction();
+    } else {
+      multiJogRevAction();
+    }
   };  
   //console.log(knobAngleInfo, multiJogKnobRotation, knobAngleInfo0.degrees);
 };
@@ -5044,9 +5123,17 @@ function handleMultiJogKnobRotation(evt) {
 multiJogKnob.onwheel = function(e) {
   e.preventDefault();
   if(e.deltaX > 0 || e.deltaY > 0) {
-    multiJogFwdAction();
+    if(e.shiftKey) {
+      multiJogShiftFwdAction();
+    } else {
+      multiJogFwdAction();
+    }
   } else if(e.deltaX < 0 || e.deltaY < 0) {
-    multiJogRevAction();
+    if(e.shiftKey) {
+      multiJogShiftRevAction();
+    } else {
+      multiJogRevAction();
+    }
   }
 };
 
@@ -5419,6 +5506,31 @@ document.getElementById('titleBar').onwheel = function(e) {
   if(e.deltaX > 0) {document.getElementById('titleBar').scrollBy(11,0)}
   else if(e.deltaX < 0) {document.getElementById('titleBar').scrollBy(-11,0)}
 };
+
+let titleBarDragStart = {x:0,y:0};
+
+document.getElementById('titleBar').onpointerdown = function (evt1) {
+  titleBarDragStart = {x:evt1.clientX, y:evt1.clientY};
+document.getElementById('titleBar').onpointermove = function (evt1) {
+  //titleBarDragStart = {x:evt1.clientX, y:evt1.clientY;
+  let titleBarDragDelta = evt1.clientX - titleBarDragStart.x;
+  if(titleBarDragDelta >= 11) {
+    document.getElementById('titleBar').scrollBy(-11,0);
+    titleBarDragStart = {x:evt1.clientX, y:evt1.clientY};
+  } else if(titleBarDragDelta <= -11) {
+    document.getElementById('titleBar').scrollBy(11,0);
+    titleBarDragStart = {x:evt1.clientX, y:evt1.clientY};
+  }
+}; 
+document.getElementById('titleBar').onpointerup = function (evt1) {
+  document.getElementById('titleBar').onpointerup = null;
+  document.getElementById('titleBar').onpointermove = null;
+}
+};
+document.getElementById('titleBar').ondragstart = function() {
+  return false;
+};
+
 let symbolPositions = {"10":{"x":-280,"y":-171},"32":{"x":-280,"y":-171},"33":{"x":-401,"y":-221},"34":{"x":-467,"y":-221},"35":{"x":-478,"y":-221},"36":{"x":-500,"y":-221},"37":{"x":-533,"y":-221},"38":{"x":-280,"y":-238},"39":{"x":-412,"y":-221},"40":{"x":-313,"y":-238},"41":{"x":-324,"y":-238},"42":{"x":-302,"y":-238},"43":{"x":-335,"y":-238},"44":{"x":-522,"y":-221},"45":{"x":-423,"y":-221},"46":{"x":-390,"y":-221},"47":{"x":-357,"y":-238},"48":{"x":-280,"y":-221},"49":{"x":-291,"y":-221},"50":{"x":-302,"y":-221},"51":{"x":-313,"y":-221},"52":{"x":-324,"y":-221},"53":{"x":-335,"y":-221},"54":{"x":-346,"y":-221},"55":{"x":-357,"y":-221},"56":{"x":-368,"y":-221},"57":{"x":-379,"y":-221},"58":{"x":-555,"y":-221},"59":{"x":-511,"y":-221},"60":{"x":-423,"y":-238},"61":{"x":-346,"y":-238},"62":{"x":-434,"y":-238},"63":{"x":-291,"y":-238},"64":{"x":-456,"y":-221},"65":{"x":-280,"y":-187},"66":{"x":-291,"y":-187},"67":{"x":-302,"y":-187},"68":{"x":-313,"y":-187},"69":{"x":-324,"y":-187},"70":{"x":-335,"y":-187},"71":{"x":-346,"y":-187},"72":{"x":-357,"y":-187},"73":{"x":-368,"y":-187},"74":{"x":-379,"y":-187},"75":{"x":-390,"y":-187},"76":{"x":-401,"y":-187},"77":{"x":-412,"y":-187},"78":{"x":-423,"y":-187},"79":{"x":-434,"y":-187},"80":{"x":-445,"y":-187},"81":{"x":-456,"y":-187},"82":{"x":-467,"y":-187},"83":{"x":-478,"y":-187},"84":{"x":-489,"y":-187},"85":{"x":-500,"y":-187},"86":{"x":-511,"y":-187},"87":{"x":-522,"y":-187},"88":{"x":-533,"y":-187},"89":{"x":-544,"y":-187},"90":{"x":-555,"y":-187},"91":{"x":-379,"y":-238},"92":{"x":-368,"y":-238},"93":{"x":-390,"y":-238},"94":{"x":-544,"y":-221},"95":{"x":-434,"y":-221},"96":{"x":-445,"y":-238},"97":{"x":-280,"y":-204},"98":{"x":-291,"y":-204},"99":{"x":-302,"y":-204},"100":{"x":-313,"y":-204},"101":{"x":-324,"y":-204},"102":{"x":-335,"y":-204},"103":{"x":-346,"y":-204},"104":{"x":-357,"y":-204},"105":{"x":-368,"y":-204},"106":{"x":-379,"y":-204},"107":{"x":-390,"y":-204},"108":{"x":-401,"y":-204},"109":{"x":-412,"y":-204},"110":{"x":-423,"y":-204},"111":{"x":-434,"y":-204},"112":{"x":-445,"y":-204},"113":{"x":-456,"y":-204},"114":{"x":-467,"y":-204},"115":{"x":-478,"y":-204},"116":{"x":-489,"y":-204},"117":{"x":-500,"y":-204},"118":{"x":-511,"y":-204},"119":{"x":-522,"y":-204},"120":{"x":-533,"y":-204},"121":{"x":-544,"y":-204},"122":{"x":-555,"y":-204},"123":{"x":-401,"y":-238},"125":{"x":-412,"y":-238},"126":{"x":-445,"y":-221},"176":{"x":-456,"y":-238},"1025":{"x":-676,"y":-255},"1028":{"x":-632,"y":-255},"1030":{"x":-643,"y":-255},"1031":{"x":-654,"y":-255},"1040":{"x":-280,"y":-255},"1041":{"x":-291,"y":-255},"1042":{"x":-302,"y":-255},"1043":{"x":-313,"y":-255},"1044":{"x":-324,"y":-255},"1045":{"x":-335,"y":-255},"1046":{"x":-346,"y":-255},"1047":{"x":-357,"y":-255},"1048":{"x":-368,"y":-255},"1049":{"x":-379,"y":-255},"1050":{"x":-390,"y":-255},"1051":{"x":-401,"y":-255},"1052":{"x":-412,"y":-255},"1053":{"x":-423,"y":-255},"1054":{"x":-434,"y":-255},"1055":{"x":-445,"y":-255},"1056":{"x":-456,"y":-255},"1057":{"x":-467,"y":-255},"1058":{"x":-478,"y":-255},"1059":{"x":-489,"y":-255},"1060":{"x":-500,"y":-255},"1061":{"x":-511,"y":-255},"1062":{"x":-522,"y":-255},"1063":{"x":-533,"y":-255},"1064":{"x":-544,"y":-255},"1065":{"x":-555,"y":-255},"1066":{"x":-566,"y":-255},"1067":{"x":-577,"y":-255},"1068":{"x":-588,"y":-255},"1069":{"x":-599,"y":-255},"1070":{"x":-610,"y":-255},"1071":{"x":-621,"y":-255},"1072":{"x":-280,"y":-272},"1073":{"x":-291,"y":-272},"1074":{"x":-302,"y":-272},"1075":{"x":-313,"y":-272},"1076":{"x":-324,"y":-272},"1077":{"x":-335,"y":-272},"1078":{"x":-346,"y":-272},"1079":{"x":-357,"y":-272},"1080":{"x":-368,"y":-272},"1081":{"x":-379,"y":-272},"1082":{"x":-390,"y":-272},"1083":{"x":-401,"y":-272},"1084":{"x":-412,"y":-272},"1085":{"x":-423,"y":-272},"1086":{"x":-434,"y":-272},"1087":{"x":-445,"y":-272},"1088":{"x":-456,"y":-272},"1089":{"x":-467,"y":-272},"1090":{"x":-478,"y":-272},"1091":{"x":-489,"y":-272},"1092":{"x":-500,"y":-272},"1093":{"x":-511,"y":-272},"1094":{"x":-522,"y":-272},"1095":{"x":-533,"y":-272},"1096":{"x":-544,"y":-272},"1097":{"x":-555,"y":-272},"1098":{"x":-566,"y":-272},"1099":{"x":-577,"y":-272},"1100":{"x":-588,"y":-272},"1101":{"x":-599,"y":-272},"1102":{"x":-610,"y":-272},"1103":{"x":-621,"y":-272},"1105":{"x":-676,"y":-272},"1108":{"x":-632,"y":-272},"1110":{"x":-643,"y":-272},"1111":{"x":-654,"y":-272},"1168":{"x":-665,"y":-255},"1169":{"x":-665,"y":-272},"8470":{"x":-489,"y":-221}};
 function renderTitleBar(text) {
   let resultChars = '';
@@ -5569,6 +5681,13 @@ analyserBox.addEventListener('click', function() {
   if(globalSettings.analyserMode == 5) {
     startVideo();
   }
+});
+
+analyserMinBtn.addEventListener('click', function() {
+  globalSettings.analyserMinMode = (globalSettings.analyserMinMode + 1) % analyserMinDecibelsValues.length;
+  localStorage.setItem('analyserMinMode', globalSettings.analyserMinMode);
+  updateTitleBar(`Visualizer min level: ${analyserMinDecibelsValues[globalSettings.analyserMinMode]}dB`);
+  analyser.minDecibels = bassAnalyser.minDecibels = leftAnalyser.minDecibels = rightAnalyser.minDecibels = inputAnalyser.minDecibels = inputBassAnalyser.minDecibels = inputLeftAnalyser.minDecibels = inputRightAnalyser.minDecibels = recordAnalyser.minDecibels = recordBassAnalyser.minDecibels = recordLeftAnalyser.minDecibels = recordRightAnalyser.minDecibels = analyserMinDecibelsValues[globalSettings.analyserMinMode];
 });
 
 analyserMaxBtn.addEventListener('click', function() {
@@ -6347,7 +6466,641 @@ localStorage.setItem('current_eqpreset', current_eqpreset);
 
 
 
+let visualizationsList = [
+  {
+    name: 'Spectrogram',
+    spectrogramImg: null,
+    spg_d: null,
+    init: function(spectrogramCtx, spectrocanvas) {
+      analyserSettings = [analyser.minDecibels,analyser.maxDecibels,analyser.smoothingTimeConstant];
+      globalSettings.analyserMinMode = 1;
+      analyser.minDecibels = analyserMinDecibelsValues[globalSettings.analyserMinMode];
+      /* analyser.maxDecibels = 0; */
+      analyser.smoothingTimeConstant = 0;
 
+      inputAnalyser.minDecibels = analyserMinDecibelsValues[globalSettings.analyserMinMode];
+      /* inputAnalyser.maxDecibels = 0; */
+      inputAnalyser.smoothingTimeConstant = 0;
+
+      recordAnalyser.minDecibels = analyserMinDecibelsValues[globalSettings.analyserMinMode];
+      /* recordAnalyser.maxDecibels = 0; */
+      recordAnalyser.smoothingTimeConstant = 0;
+
+      this.spectrogramImg = spectrogramCtx.getImageData(0, 0, spectrocanvas.width, spectrocanvas.height);
+      this.spg_d = audio.currentTime;
+    },
+    render: function(spectrogramCtx, spectrocanvas) {
+      this.spectrogramImg = spectrogramCtx.getImageData(0, 0, spectrocanvas.width, spectrocanvas.height);
+      spectrogramCtx.fillStyle = '#000';
+      spectrogramCtx.fillRect(0,0,spectrocanvas.width,spectrocanvas.height);
+      let analyserArr = Array.from(analyserDataArray);
+      for(let i=0;i<analyserArr.length;i++){
+      spectrogramCtx.fillStyle = `hsl(${240-analyserArr[i]/255*240}deg, 100%, ${analyserArr[i]/255*50}%)`;
+      spectrogramCtx.fillRect(0, spectrocanvas.height-spectrocanvas.height/analyserArr.length*i, 1, (spectrocanvas.height/analyserArr.length));
+      if(Math.round(i*24000/analyserArr.length) % 1000 < 24000/analyserArr.length) {
+        spectrogramCtx.fillStyle = '#fff8';
+        spectrogramCtx.fillRect(0,(analyserArr.length-i)*(spectrocanvas.height/analyserArr.length),1,1);
+      }
+      };
+      if(Math.abs(audio.currentTime - this.spg_d) >= 1) {
+        this.spg_d = audio.currentTime;
+        spectrogramCtx.fillStyle = '#fff8';
+        spectrogramCtx.fillRect(0,0,1,spectrocanvas.height);
+      }
+      spectrogramCtx.putImageData(this.spectrogramImg, 1, 0);
+    },
+    end: function() {
+      analyser.minDecibels = analyserSettings[0];
+      /* analyser.maxDecibels = analyserSettings[1]; */
+      analyser.smoothingTimeConstant = analyserSettings[2];
+
+      recordAnalyser.minDecibels = analyserSettings[0];
+      /* recordAnalyser.maxDecibels = analyserSettings[1]; */
+      recordAnalyser.smoothingTimeConstant = analyserSettings[2];
+
+      inputAnalyser.minDecibels = analyserSettings[0];
+      /* inputAnalyser.maxDecibels = analyserSettings[1]; */
+      inputAnalyser.smoothingTimeConstant = analyserSettings[2];
+    }
+  },
+  {
+    name: 'Spectrum',
+    spectrumValuesArr: Array.from(analyserDataArray),
+    spectrumPeaksArr: Array.from(analyserDataArray),
+    settings: {
+      fallingSpeed: {
+        value: 5,
+        name: 'Falling speed',
+        type: 'number'
+      },
+      peaksFallingSpeed: {
+        value: 0.5,
+        name: 'Peaks falling speed',
+        type: 'number'
+      },
+      bgColor: {
+        value: '#000',
+        name: 'Background color',
+        type: 'string'
+      },
+      minHue: {
+        value: 240,
+        name: 'Min hue',
+        type: 'number'
+      },
+      maxHue: {
+        value: 0,
+        name: 'Max hue',
+        type: 'number'
+      },
+      minSaturation: {
+        value: 1,
+        name: 'Min saturation',
+        type: 'number'
+      },
+      maxSaturation: {
+        value: 1,
+        name: 'Max saturation',
+        type: 'number'
+      },
+      minLuminance: {
+        value: 0.5,
+        name: 'Min luminance',
+        type: 'number'
+      },
+      maxLuminance: {
+        value: 0.5,
+        name: 'Max luminance',
+        type: 'number'
+      },
+      minOpacity: {
+        value: 0,
+        name: 'Min opacity',
+        type: 'number'
+      },
+      maxOpacity: {
+        value: 1,
+        name: 'Max opacity',
+        type: 'number'
+      },
+      addIntermediateColorStops: {
+        value: 0,
+        name: 'Add intermediate color stops (gradient fill mode)',
+        type: 'checkbox'
+      },
+      peaksColor: {
+        value: '#fff8',
+        name: 'Peaks color',
+        type: 'string'
+      },
+      fillMode: {
+        value: 1,
+        name: 'Fill mode',
+        type: 'select',
+        options: {
+          '0': 'Gradient',
+          '1': 'Solid'
+        }
+      }
+    },
+    fillGradient: null,
+    init: function(ctx, c) {
+      analyserSettings = [analyser.minDecibels,analyser.maxDecibels,analyser.smoothingTimeConstant];
+      globalSettings.analyserMinMode = 1;
+      
+      analyser.minDecibels = analyserMinDecibelsValues[globalSettings.analyserMinMode];
+      analyser.smoothingTimeConstant = 0;
+
+      inputAnalyser.minDecibels = analyserMinDecibelsValues[globalSettings.analyserMinMode];
+      inputAnalyser.smoothingTimeConstant = 0;
+
+      recordAnalyser.minDecibels = analyserMinDecibelsValues[globalSettings.analyserMinMode];
+      recordAnalyser.smoothingTimeConstant = 0;
+    },
+    frameRate: 0,
+    date: performance.now(),
+    render: function(ctx, c) {
+      let d = performance.now();
+      this.frameRate = 1000/(d - this.date);
+      /* let time_delta = d-this.date; */
+      this.date = d;
+      ctx.fillStyle = this.settings.bgColor.value;
+      ctx.fillRect(0,0,c.width,c.height);
+      let analyserArr = Array.from(analyserDataArray);
+      if(this.settings.fillMode.value == '0') {
+        this.fillGradient = ctx.createLinearGradient(0, 0, 0, c.height);
+        if(this.settings.maxHue.value>this.settings.minHue.value) {
+          this.fillGradient.addColorStop(0, `hsla(${this.settings.maxHue.value}deg, ${this.settings.maxSaturation.value*100}%, ${this.settings.maxLuminance.value*100}%, ${this.settings.maxOpacity.value})`);
+          if(this.settings.addIntermediateColorStops.value == 1) {
+            this.fillGradient.addColorStop(0.125,                  `hsla(${(this.settings.minHue.value+(this.settings.maxHue.value-this.settings.minHue.value)/8*7)}deg,         ${(this.settings.minSaturation.value+(this.settings.maxSaturation.value-this.settings.minSaturation.value)/8*7)*100}%, ${(this.settings.minLuminance.value+(this.settings.maxLuminance.value-this.settings.minLuminance.value)/8*7)*100}%,         ${this.settings.minOpacity.value+(this.settings.maxOpacity.value-this.settings.minOpacity.value)/8*7})`);
+            this.fillGradient.addColorStop(0.25,                   `hsla(${(this.settings.minHue.value+(this.settings.maxHue.value-this.settings.minHue.value)/4*3)}deg,         ${(this.settings.minSaturation.value+(this.settings.maxSaturation.value-this.settings.minSaturation.value)/4*3)*100}%, ${(this.settings.minLuminance.value+(this.settings.maxLuminance.value-this.settings.minLuminance.value)/4*3)*100}%,        ${this.settings.minOpacity.value+(this.settings.maxOpacity.value-this.settings.minOpacity.value)/4*3})`);
+            this.fillGradient.addColorStop(0.375,                  `hsla(${(this.settings.minHue.value+(this.settings.maxHue.value-this.settings.minHue.value)/8*5)}deg,         ${(this.settings.minSaturation.value+(this.settings.maxSaturation.value-this.settings.minSaturation.value)/8*5)*100}%, ${(this.settings.minLuminance.value+(this.settings.maxLuminance.value-this.settings.minLuminance.value)/8*5)*100}%,           ${this.settings.minOpacity.value+(this.settings.maxOpacity.value-this.settings.minOpacity.value)/8*5})`);
+          }
+          this.fillGradient.addColorStop(0.5,                      `hsla(${(this.settings.minHue.value+(this.settings.maxHue.value-this.settings.minHue.value)/2)}deg,           ${(this.settings.minSaturation.value+(this.settings.maxSaturation.value-this.settings.minSaturation.value)/2)*100}%,   ${(this.settings.minLuminance.value+(this.settings.maxLuminance.value-this.settings.minLuminance.value)/2)*100}%,         ${this.settings.minOpacity.value+(this.settings.maxOpacity.value-this.settings.minOpacity.value)/2})`);
+          if(this.settings.addIntermediateColorStops.value == 1) {
+            this.fillGradient.addColorStop(0.625,                  `hsla(${(this.settings.minHue.value+(this.settings.maxHue.value-this.settings.minHue.value)/8*3)}deg,         ${(this.settings.minSaturation.value+(this.settings.maxSaturation.value-this.settings.minSaturation.value)/8*3)*100}%, ${(this.settings.minLuminance.value+(this.settings.maxLuminance.value-this.settings.minLuminance.value)/8*3)*100}%,           ${this.settings.minOpacity.value+(this.settings.maxOpacity.value-this.settings.minOpacity.value)/8*3})`);
+            this.fillGradient.addColorStop(0.75,                   `hsla(${(this.settings.minHue.value+(this.settings.maxHue.value-this.settings.minHue.value)/4)}deg,           ${(this.settings.minSaturation.value+(this.settings.maxSaturation.value-this.settings.minSaturation.value)/4)*100}%,   ${(this.settings.minLuminance.value+(this.settings.maxLuminance.value-this.settings.minLuminance.value)/4)*100}%,              ${this.settings.minOpacity.value+(this.settings.maxOpacity.value-this.settings.minOpacity.value)/4})`);
+            this.fillGradient.addColorStop(0.875,                  `hsla(${(this.settings.minHue.value+(this.settings.maxHue.value-this.settings.minHue.value)/8)}deg,           ${(this.settings.minSaturation.value+(this.settings.maxSaturation.value-this.settings.minSaturation.value)/8)*100}%,   ${(this.settings.minLuminance.value+(this.settings.maxLuminance.value-this.settings.minLuminance.value)/8)*100}%,               ${this.settings.minOpacity.value+(this.settings.maxOpacity.value-this.settings.minOpacity.value)/8})`);
+          }
+          this.fillGradient.addColorStop(1, `hsla(${this.settings.minHue.value}deg, ${this.settings.minSaturation.value*100}%, ${this.settings.minLuminance.value*100}%, ${this.settings.minOpacity.value})`);
+        } else {
+          this.fillGradient.addColorStop(0, `hsla(${this.settings.maxHue.value}deg, ${this.settings.maxSaturation.value*100}%, ${this.settings.maxLuminance.value*100}%, ${this.settings.maxOpacity.value})`);
+          if(this.settings.addIntermediateColorStops.value == 1) {
+            this.fillGradient.addColorStop(0.125,                  `hsla(${(this.settings.maxHue.value+Math.abs(this.settings.maxHue.value-this.settings.minHue.value)/8)}deg,   ${(this.settings.minSaturation.value+(this.settings.maxSaturation.value-this.settings.minSaturation.value)/8*7)*100}%, ${(this.settings.minLuminance.value+(this.settings.maxLuminance.value-this.settings.minLuminance.value)/8*7)*100}%,   ${this.settings.minOpacity.value+(this.settings.maxOpacity.value-this.settings.minOpacity.value)/8*7})`);
+            this.fillGradient.addColorStop(0.25,                   `hsla(${(this.settings.maxHue.value+Math.abs(this.settings.maxHue.value-this.settings.minHue.value)/4)}deg,   ${(this.settings.minSaturation.value+(this.settings.maxSaturation.value-this.settings.minSaturation.value)/4*3)*100}%, ${(this.settings.minLuminance.value+(this.settings.maxLuminance.value-this.settings.minLuminance.value)/4*3)*100}%,  ${this.settings.minOpacity.value+(this.settings.maxOpacity.value-this.settings.minOpacity.value)/4*3})`);
+            this.fillGradient.addColorStop(0.375,                  `hsla(${(this.settings.maxHue.value+Math.abs(this.settings.maxHue.value-this.settings.minHue.value)/8*3)}deg, ${(this.settings.minSaturation.value+(this.settings.maxSaturation.value-this.settings.minSaturation.value)/8*5)*100}%, ${(this.settings.minLuminance.value+(this.settings.maxLuminance.value-this.settings.minLuminance.value)/8*5)*100}%,   ${this.settings.minOpacity.value+(this.settings.maxOpacity.value-this.settings.minOpacity.value)/8*5})`);
+          }
+          this.fillGradient.addColorStop(0.5,                      `hsla(${(this.settings.maxHue.value+Math.abs(this.settings.maxHue.value-this.settings.minHue.value)/2)}deg,   ${(this.settings.minSaturation.value+(this.settings.maxSaturation.value-this.settings.minSaturation.value)/2)*100}%,   ${(this.settings.minLuminance.value+(this.settings.maxLuminance.value-this.settings.minLuminance.value)/2)*100}%, ${this.settings.minOpacity.value+(this.settings.maxOpacity.value-this.settings.minOpacity.value)/2})`);
+          if(this.settings.addIntermediateColorStops.value == 1) {
+            this.fillGradient.addColorStop(0.625,                  `hsla(${(this.settings.maxHue.value+Math.abs(this.settings.maxHue.value-this.settings.minHue.value)/8*5)}deg, ${(this.settings.minSaturation.value+(this.settings.maxSaturation.value-this.settings.minSaturation.value)/8*3)*100}%, ${(this.settings.minLuminance.value+(this.settings.maxLuminance.value-this.settings.minLuminance.value)/8*3)*100}%,   ${this.settings.minOpacity.value+(this.settings.maxOpacity.value-this.settings.minOpacity.value)/8*3})`);
+            this.fillGradient.addColorStop(0.75,                   `hsla(${(this.settings.maxHue.value+Math.abs(this.settings.maxHue.value-this.settings.minHue.value)/4*3)}deg, ${(this.settings.minSaturation.value+(this.settings.maxSaturation.value-this.settings.minSaturation.value)/4)*100}%,   ${(this.settings.minLuminance.value+(this.settings.maxLuminance.value-this.settings.minLuminance.value)/4)*100}%,    ${this.settings.minOpacity.value+(this.settings.maxOpacity.value-this.settings.minOpacity.value)/4})`);
+            this.fillGradient.addColorStop(0.875,                  `hsla(${(this.settings.maxHue.value+Math.abs(this.settings.maxHue.value-this.settings.minHue.value)/8*7)}deg, ${(this.settings.minSaturation.value+(this.settings.maxSaturation.value-this.settings.minSaturation.value)/8)*100}%,   ${(this.settings.minLuminance.value+(this.settings.maxLuminance.value-this.settings.minLuminance.value)/8)*100}%,     ${this.settings.minOpacity.value+(this.settings.maxOpacity.value-this.settings.minOpacity.value)/8})`);
+          }
+          this.fillGradient.addColorStop(1, `hsla(${this.settings.minHue.value}deg, ${this.settings.minSaturation.value*100}%, ${this.settings.minLuminance.value*100}%, ${this.settings.minOpacity.value})`);
+        }
+        //ctx.fillStyle = this.fillGradient;
+      };
+      for(let i=0;i<analyserArr.length;i++){
+        if(this.spectrumValuesArr[i] < analyserArr[i]) {
+          this.spectrumValuesArr[i] = analyserArr[i]
+        } else if(this.spectrumValuesArr[i] > 0) {
+          this.spectrumValuesArr[i]-=this.settings.fallingSpeed.value/this.frameRate*60;
+        };
+        if(this.spectrumPeaksArr[i] < analyserArr[i]) {
+          this.spectrumPeaksArr[i] = analyserArr[i]
+        } else if(this.spectrumPeaksArr[i] > 0) {
+          this.spectrumPeaksArr[i]-=this.settings.peaksFallingSpeed.value/this.frameRate*60;
+        };
+        if(this.settings.fillMode.value == '0') {
+/*           this.fillGradient = ctx.createLinearGradient(0, 0, 0, c.height);
+          if(this.settings.maxHue.value<this.settings.minHue.value) {
+            this.fillGradient.addColorStop(0, `hsl(${this.settings.minHue.value}deg, 100%, ${this.settings.minLuminance.value}%)`);
+            this.fillGradient.addColorStop(1, `hsl(${this.settings.maxHue.value}deg, 100%, ${this.settings.maxLuminance.value}%)`);
+          } else {
+            this.fillGradient.addColorStop(0, `hsl(${this.settings.maxHue.value}deg, 100%, ${this.settings.minLuminance.value}%)`);
+            this.fillGradient.addColorStop(1, `hsl(${this.settings.minHue.value}deg, 100%, ${this.settings.maxLuminance.value}%)`);
+          } */
+          ctx.fillStyle = this.fillGradient;
+        } else {
+          if(this.settings.maxHue.value<this.settings.minHue.value) {
+            ctx.fillStyle = `hsla(${this.settings.minHue.value-this.spectrumValuesArr[i]/255*Math.abs(this.settings.minHue.value-this.settings.maxHue.value)}deg, ${this.spectrumValuesArr[i]/255*((this.settings.maxSaturation.value-this.settings.minSaturation.value)*100)+this.settings.minSaturation.value*100}%, ${this.spectrumValuesArr[i]/255*((this.settings.maxLuminance.value-this.settings.minLuminance.value)*100)+this.settings.minLuminance.value*100}%, ${this.spectrumValuesArr[i]/255*((this.settings.maxOpacity.value-this.settings.minOpacity.value))+this.settings.minOpacity.value})`;
+          } else {
+            ctx.fillStyle = `hsla(${this.settings.minHue.value+this.spectrumValuesArr[i]/255*Math.abs(this.settings.maxHue.value-this.settings.minHue.value)}deg, ${this.spectrumValuesArr[i]/255*((this.settings.maxSaturation.value-this.settings.minSaturation.value)*100)+this.settings.minSaturation.value*100}%, ${this.spectrumValuesArr[i]/255*((this.settings.maxLuminance.value-this.settings.minLuminance.value)*100)+this.settings.minLuminance.value*100}%, ${this.spectrumValuesArr[i]/255*((this.settings.maxOpacity.value-this.settings.minOpacity.value))+this.settings.minOpacity.value})`;
+          }
+        };
+
+
+        ctx.fillRect(c.width/this.spectrumValuesArr.length*i, c.height-(this.spectrumValuesArr[i]/255*c.height), c.width/this.spectrumValuesArr.length, this.spectrumValuesArr[i]/255*c.height);
+        ctx.fillStyle = this.settings.peaksColor.value;
+        ctx.fillRect(c.width/this.spectrumPeaksArr.length*i, c.height-(this.spectrumPeaksArr[i]/255*c.height), c.width/this.spectrumPeaksArr.length, 1);
+
+/*         ctx.textBaseline = 'top';
+        ctx.font = `bold ${c.width/96}px monospace`;
+        ctx.fillStyle = '#fff';
+        ctx.textAlign = 'right';
+        ctx.fillText(`${Math.floor(this.frameRate)} FPS`, c.width/4, c.width/48);
+        ctx.fillText(`${Math.floor(time_delta)} ms`, c.width/4, c.width/24);
+        ctx.textBaseline = 'alphabetic'; */
+      }
+    },
+    end: function() {
+      analyser.minDecibels = analyserSettings[0];
+      analyser.smoothingTimeConstant = analyserSettings[2];
+
+      recordAnalyser.minDecibels = analyserSettings[0];
+      recordAnalyser.smoothingTimeConstant = analyserSettings[2];
+
+      inputAnalyser.minDecibels = analyserSettings[0];
+      inputAnalyser.smoothingTimeConstant = analyserSettings[2];
+    }
+  },
+  {
+    name: 'VU meter',
+    leftValue: Math.max(...Array.from(leftAnalyserDataArray)),
+    rightValue: Math.max(...Array.from(rightAnalyserDataArray)),
+    leftAnalysersmoothingTimeConstant: leftAnalyser.smoothingTimeConstant,
+    rightAnalysersmoothingTimeConstant: rightAnalyser.smoothingTimeConstant,
+    recordLeftAnalysersmoothingTimeConstant: recordLeftAnalyser.smoothingTimeConstant,
+    recordRightAnalysersmoothingTimeConstant: recordRightAnalyser.smoothingTimeConstant,
+    inputLeftAnalysersmoothingTimeConstant: inputLeftAnalyser.smoothingTimeConstant,
+    inputRightAnalysersmoothingTimeConstant: inputRightAnalyser.smoothingTimeConstant,
+    settings: {
+      fallingSpeed: {
+        value: 3,
+        name: 'Return speed',
+        type: 'number'
+      },
+      decibelLabelStep: {
+        value: 5,
+        name: 'Decibel labels step',
+        type: 'number'
+      },
+      showShadows: {
+        value: 1,
+        name: 'Show shadows',
+        type: 'checkbox'
+      },
+      arrowShadows: {
+        value: 0,
+        name: 'Show arrows shadows',
+        type: 'checkbox'
+      },
+      scaleMode: {
+        value: 0,
+        name: 'Scale mode',
+        type: 'select',
+        options: {
+          '0': 'Thick arc',
+          '1': 'Thin arc with lines',
+          '2': 'Lines'/* ,
+          '3': 'Lines 2' */
+        }
+      }
+    },
+/*     lastValues: [[0,0]], */
+    init: function(ctx, c) {
+      leftAnalyser.smoothingTimeConstant = 0;
+      rightAnalyser.smoothingTimeConstant = 0;
+      recordLeftAnalyser.smoothingTimeConstant = 0;
+      recordRightAnalyser.smoothingTimeConstant = 0;
+      inputLeftAnalyser.smoothingTimeConstant = 0;
+      inputRightAnalyser.smoothingTimeConstant = 0;
+      this.arrowsLength = c.width/6;
+    },
+    arrowsLength: 0,
+    frameRate: 0,
+    date: performance.now(),
+    renderedBackground: null,
+    renderedFrontFrame: null,
+    renderedBackgroundImage: null,
+    renderedFrontFrameImage: null,
+    renderBackground: async function(ctx, c) {
+      ctx.clearRect(0,0,c.width,c.height);
+/*       ctx.fillStyle = '#000';
+      ctx.fillRect(0,0,c.width,c.height); */
+
+      ctx.fillStyle = '#333';
+      //ctx.beginPath();
+      ctx.fillRect(c.width/4-this.arrowsLength+c.width/128, c.height/2-this.arrowsLength*1+c.width/128, this.arrowsLength*2-c.width/64, this.arrowsLength*2-c.width/64, /* c.width/192 */);
+      //ctx.fill();
+      //ctx.beginPath();
+      ctx.fillRect(c.width/4*3-this.arrowsLength+c.width/128, c.height/2-this.arrowsLength*1+c.width/128, this.arrowsLength*2-c.width/64, this.arrowsLength*2-c.width/64, /* c.width/192 */);
+      //ctx.fill();
+      console.log(`background render size: ${c.width}x${c.height}`);
+      this.renderedBackground = ctx.getImageData(0,0,c.width,c.height);
+      this.renderedBackgroundImage = await createImageBitmap(this.renderedBackground);
+    },
+    renderFrontFrame: async function(ctx, c) {
+      ctx.clearRect(0,0,c.width,c.height);
+      if(this.settings.showShadows.value) {
+        ctx.filter = `blur(${c.width/256}px)`;
+        ctx.fillStyle = ctx.strokeStyle = `#0004`;/* 
+        ctx.fillRect(c.width/4-this.arrowsLength, c.height/2+this.arrowsLength/6, this.arrowsLength*2, c.width/128);
+        ctx.fillRect(c.width/4*3-this.arrowsLength, c.height/2+this.arrowsLength/6, this.arrowsLength*2, c.width/128); */
+        ctx.lineWidth = c.width/64;
+        ctx.strokeRect(c.width/4-this.arrowsLength+c.width/96, c.height/2-this.arrowsLength*1+c.width/96, this.arrowsLength*2-c.width/64, this.arrowsLength*1.125);
+        ctx.strokeRect(c.width/4*3-this.arrowsLength+c.width/96, c.height/2-this.arrowsLength*1+c.width/96, this.arrowsLength*2-c.width/64, this.arrowsLength*1.125);
+        ctx.filter = `none`;
+      }
+
+      ctx.strokeStyle = '#444';
+      ctx.lineWidth = c.width/128;
+      ctx.beginPath();
+      ctx.roundRect(c.width/4-this.arrowsLength+c.width/256, c.height/2-this.arrowsLength*1+c.width/256, this.arrowsLength*2-c.width/128, this.arrowsLength*2-c.width/128, c.width/128);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.roundRect(c.width/4*3-this.arrowsLength+c.width/256, c.height/2-this.arrowsLength*1+c.width/256, this.arrowsLength*2-c.width/128, this.arrowsLength*2-c.width/128, c.width/128);
+      ctx.stroke();
+
+      ctx.fillStyle = '#444';
+      //c.height/2-this.arrowsLength*1
+      //this.arrowsLength*2
+      ctx.beginPath();
+      ctx.roundRect(c.width/4-this.arrowsLength, c.height/2+this.arrowsLength/6, this.arrowsLength*2, this.arrowsLength-this.arrowsLength/6, c.width/128);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.roundRect(c.width/4*3-this.arrowsLength, c.height/2+this.arrowsLength/6, this.arrowsLength*2, this.arrowsLength-this.arrowsLength/6, c.width/128);
+      ctx.fill();
+
+      ctx.fillRect(c.width/4-this.arrowsLength, c.height/2+this.arrowsLength/6, this.arrowsLength*2, c.width/128);
+      ctx.fillRect(c.width/4*3-this.arrowsLength, c.height/2+this.arrowsLength/6, this.arrowsLength*2, c.width/128);
+
+      console.log(`front frame render size: ${c.width}x${c.height}`);
+      this.renderedFrontFrame = ctx.getImageData(0,0,c.width,c.height);
+      this.renderedFrontFrameImage = await createImageBitmap(this.renderedFrontFrame);
+    },
+    onresize: async function(ctx, c) {
+      this.arrowsLength = c.width/6;
+      await this.renderBackground(ctx, c);
+      await this.renderFrontFrame(ctx, c);
+    },
+    render: function(ctx, c) {
+      let d = performance.now();
+      this.frameRate = 1000/(d - this.date);
+/*       let time_delta = d-this.date; */
+      this.date = d;
+      if (!this.renderedBackgroundImage) {
+        this.renderBackground(ctx, c);
+      }
+      if (!this.renderedFrontFrameImage) {
+        this.renderFrontFrame(ctx, c);
+      }
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0,0,c.width,c.height);
+      let leftValue = Math.max(...Array.from(leftAnalyserDataArray));
+      let rightValue = Math.max(...Array.from(rightAnalyserDataArray));
+/*       this.lastValues.unshift([this.leftValue,this.rightValue]);
+      this.lastValues.pop(); */
+      if(this.leftValue < leftValue) {
+        //this.leftValue = leftValue;
+        this.leftValue = leftValue;
+      } else if(this.leftValue > leftValue && this.leftValue > 0) {
+        this.leftValue-=this.settings.fallingSpeed.value/this.frameRate*60;
+      }
+      if(this.rightValue < rightValue) {
+        this.rightValue = rightValue;
+        //this.rightValue = Math.min(Math.max(this.rightValue*1.1, 1), 255);
+      } else if(this.rightValue > rightValue && this.rightValue > 0) {
+        this.rightValue-=this.settings.fallingSpeed.value/this.frameRate*60;
+      }
+      this.arrowsLength = c.width/6;
+      let leftArrowStartCoordinates = [c.width/4, c.height/2+this.arrowsLength/2];
+      let rightArrowStartCoordinates = [c.width/4*3, c.height/2+this.arrowsLength/2];
+
+      let leftArrowEndCoordinates = [leftArrowStartCoordinates[0]-this.arrowsLength*Math.cos(this.leftValue/255 > 0.5 ? -Math.PI/180*(45+this.leftValue/255*90) : Math.PI/180*(45+this.leftValue/255*90)), leftArrowStartCoordinates[1]-this.arrowsLength*Math.sin(Math.PI/180*(45+this.leftValue/255*90))];
+      let rightArrowEndCoordinates = [rightArrowStartCoordinates[0]-this.arrowsLength*Math.cos(this.rightValue/255 > 0.5 ? -Math.PI/180*(45+this.rightValue/255*90) : Math.PI/180*(45+this.rightValue/255*90)), rightArrowStartCoordinates[1]-this.arrowsLength*Math.sin(Math.PI/180*(45+this.rightValue/255*90))];
+      //console.log(this.leftValue/255*90);
+      let startAngle = -Math.PI/180*135;
+      let endAngle = -Math.PI/180*45;
+      let analyserDecibelsRange = leftAnalyser.maxDecibels-leftAnalyser.minDecibels;
+
+      if (this.renderedBackgroundImage) {
+        ctx.drawImage(this.renderedBackgroundImage,0,0,c.width,c.height);
+      }
+      if(this.settings.scaleMode.value == '0') {
+        ctx.strokeStyle = "#556";
+        ctx.lineWidth = c.width/64;
+        ctx.beginPath();
+        //ctx.arc(leftArrowStartCoordinates[0], leftArrowStartCoordinates[1], this.arrowsLength*0.95, -Math.PI/180*135, -Math.PI/180*(45-Math.min(leftAnalyser.maxDecibels/(leftAnalyser.maxDecibels+leftAnalyser.minDecibels)*90, 0)));
+        ctx.arc(leftArrowStartCoordinates[0], leftArrowStartCoordinates[1], this.arrowsLength*0.95, startAngle, endAngle-(Math.PI/180*Math.max(leftAnalyser.maxDecibels/analyserDecibelsRange*90, 0)), 0);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(rightArrowStartCoordinates[0], rightArrowStartCoordinates[1], this.arrowsLength*0.95, startAngle, endAngle-(Math.PI/180*Math.max(leftAnalyser.maxDecibels/analyserDecibelsRange*90, 0)), 0);
+        ctx.stroke();
+        ctx.strokeStyle = "#755";
+        ctx.beginPath();
+        ctx.arc(leftArrowStartCoordinates[0], leftArrowStartCoordinates[1], this.arrowsLength*0.95, endAngle-(Math.PI/180*Math.max(leftAnalyser.maxDecibels/analyserDecibelsRange*90, 0)), endAngle);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(rightArrowStartCoordinates[0], rightArrowStartCoordinates[1], this.arrowsLength*0.95, endAngle-(Math.PI/180*Math.max(leftAnalyser.maxDecibels/analyserDecibelsRange*90, 0)), endAngle);
+        ctx.stroke();
+        
+        ctx.strokeStyle = '#333';
+        ctx.fillStyle = "#999";
+        ctx.font = `bold ${c.width/96}px monospace`;
+        ctx.textAlign = 'center';
+        for (let i = leftAnalyser.minDecibels; i <= leftAnalyser.maxDecibels; i+=(this.settings.decibelLabelStep.value > 0 ? this.settings.decibelLabelStep.value : 1)) {
+          ctx.beginPath();
+          ctx.arc(leftArrowStartCoordinates[0], leftArrowStartCoordinates[1], this.arrowsLength*0.95, Math.PI/180*(-135+((i-leftAnalyser.minDecibels)/(leftAnalyser.maxDecibels-leftAnalyser.minDecibels)*90)), Math.PI/180*(-135+((i-leftAnalyser.minDecibels)/(leftAnalyser.maxDecibels-leftAnalyser.minDecibels)*90)+0.25));
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(rightArrowStartCoordinates[0], rightArrowStartCoordinates[1], this.arrowsLength*0.95, Math.PI/180*(-135+((i-leftAnalyser.minDecibels)/(leftAnalyser.maxDecibels-leftAnalyser.minDecibels)*90)), Math.PI/180*(-135+((i-leftAnalyser.minDecibels)/(leftAnalyser.maxDecibels-leftAnalyser.minDecibels)*90)+0.25));
+          ctx.stroke();
+          ctx.fillText(i, leftArrowStartCoordinates[0]+this.arrowsLength*1.05*Math.cos(Math.PI/180*(-135+((i-leftAnalyser.minDecibels)/(leftAnalyser.maxDecibels-leftAnalyser.minDecibels)*90))), leftArrowStartCoordinates[1]+this.arrowsLength*1.05*Math.sin(Math.PI/180*(-135+((i-leftAnalyser.minDecibels)/(leftAnalyser.maxDecibels-leftAnalyser.minDecibels)*90))));
+          ctx.fillText(i, rightArrowStartCoordinates[0]+this.arrowsLength*1.05*Math.cos(Math.PI/180*(-135+((i-leftAnalyser.minDecibels)/(leftAnalyser.maxDecibels-leftAnalyser.minDecibels)*90))), rightArrowStartCoordinates[1]+this.arrowsLength*1.05*Math.sin(Math.PI/180*(-135+((i-leftAnalyser.minDecibels)/(leftAnalyser.maxDecibels-leftAnalyser.minDecibels)*90))));
+        }
+      } else if(this.settings.scaleMode.value == '1' || this.settings.scaleMode.value == '2') {
+        if(this.settings.scaleMode.value == '1') {
+          ctx.strokeStyle = "#556";
+          ctx.lineWidth = c.width/256;
+          ctx.beginPath();
+          //ctx.arc(leftArrowStartCoordinates[0], leftArrowStartCoordinates[1], this.arrowsLength*0.95, -Math.PI/180*135, -Math.PI/180*(45-Math.min(leftAnalyser.maxDecibels/(leftAnalyser.maxDecibels+leftAnalyser.minDecibels)*90, 0)));
+          ctx.arc(leftArrowStartCoordinates[0], leftArrowStartCoordinates[1], this.arrowsLength*0.95-c.width/512*3, startAngle, endAngle-(Math.PI/180*Math.max(leftAnalyser.maxDecibels/analyserDecibelsRange*90, 0)), 0);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(rightArrowStartCoordinates[0], rightArrowStartCoordinates[1], this.arrowsLength*0.95-c.width/512*3, startAngle, endAngle-(Math.PI/180*Math.max(leftAnalyser.maxDecibels/analyserDecibelsRange*90, 0)), 0);
+          ctx.stroke();
+          ctx.strokeStyle = "#755";
+          ctx.beginPath();
+          ctx.arc(leftArrowStartCoordinates[0], leftArrowStartCoordinates[1], this.arrowsLength*0.95-c.width/512*3, endAngle-(Math.PI/180*Math.max(leftAnalyser.maxDecibels/analyserDecibelsRange*90, 0)), endAngle);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(rightArrowStartCoordinates[0], rightArrowStartCoordinates[1], this.arrowsLength*0.95-c.width/512*3, endAngle-(Math.PI/180*Math.max(leftAnalyser.maxDecibels/analyserDecibelsRange*90, 0)), endAngle);
+          ctx.stroke();
+        }
+        /* ctx.strokeStyle = '#333'; */
+        ctx.fillStyle = "#999";
+        ctx.font = `bold ${c.width/96}px monospace`;
+        ctx.textAlign = 'center';
+        ctx.lineWidth = c.width/64;
+        for (let i = leftAnalyser.minDecibels; i <= leftAnalyser.maxDecibels; i+=(this.settings.decibelLabelStep.value > 0 ? this.settings.decibelLabelStep.value : 1)) {
+          if(i < 0) {
+            ctx.strokeStyle = "#556";
+          } else {
+            ctx.strokeStyle = "#755";
+          }
+          ctx.beginPath();
+          ctx.arc(leftArrowStartCoordinates[0], leftArrowStartCoordinates[1], this.arrowsLength*0.95, Math.PI/180*(-135+((i-leftAnalyser.minDecibels)/(leftAnalyser.maxDecibels-leftAnalyser.minDecibels)*90)), Math.PI/180*(-135+((i-leftAnalyser.minDecibels)/(leftAnalyser.maxDecibels-leftAnalyser.minDecibels)*90)+0.75));
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(rightArrowStartCoordinates[0], rightArrowStartCoordinates[1], this.arrowsLength*0.95, Math.PI/180*(-135+((i-leftAnalyser.minDecibels)/(leftAnalyser.maxDecibels-leftAnalyser.minDecibels)*90)), Math.PI/180*(-135+((i-leftAnalyser.minDecibels)/(leftAnalyser.maxDecibels-leftAnalyser.minDecibels)*90)+0.75));
+          ctx.stroke();
+          ctx.fillText(i, leftArrowStartCoordinates[0]+this.arrowsLength*1.05*Math.cos(Math.PI/180*(-135+((i-leftAnalyser.minDecibels)/(leftAnalyser.maxDecibels-leftAnalyser.minDecibels)*90))), leftArrowStartCoordinates[1]+this.arrowsLength*1.05*Math.sin(Math.PI/180*(-135+((i-leftAnalyser.minDecibels)/(leftAnalyser.maxDecibels-leftAnalyser.minDecibels)*90))));
+          ctx.fillText(i, rightArrowStartCoordinates[0]+this.arrowsLength*1.05*Math.cos(Math.PI/180*(-135+((i-leftAnalyser.minDecibels)/(leftAnalyser.maxDecibels-leftAnalyser.minDecibels)*90))), rightArrowStartCoordinates[1]+this.arrowsLength*1.05*Math.sin(Math.PI/180*(-135+((i-leftAnalyser.minDecibels)/(leftAnalyser.maxDecibels-leftAnalyser.minDecibels)*90))));
+        }
+      } /* else if(this.settings.scaleMode.value == '3') {
+        ctx.fillStyle = "#999";
+        ctx.font = `bold ${c.width/96}px monospace`;
+        ctx.textAlign = 'center';
+        ctx.lineWidth = c.width/256;
+        for (let i = leftAnalyser.minDecibels; i <= leftAnalyser.maxDecibels; i+=(this.settings.decibelLabelStep.value > 0 ? this.settings.decibelLabelStep.value : 1)) {
+          if(i < 0) {
+            ctx.strokeStyle = "#556";
+          } else {
+            ctx.strokeStyle = "#755";
+          }
+          ctx.beginPath();
+          ctx.moveTo(c.width/2-leftArrowStartCoordinates[0]+(this.arrowsLength*0.5-c.width/4)/Math.tan((i-leftAnalyser.minDecibels)/(leftAnalyser.maxDecibels-leftAnalyser.minDecibels) > 0.5 ? -Math.PI/180*(45+(i-leftAnalyser.minDecibels)/(leftAnalyser.maxDecibels-leftAnalyser.minDecibels)*90) : Math.PI/180*(45+(i-leftAnalyser.minDecibels)/(leftAnalyser.maxDecibels-leftAnalyser.minDecibels)*90)), this.arrowsLength*0.5);
+          ctx.lineTo(c.width/2-leftArrowStartCoordinates[0]+(this.arrowsLength-c.width/4)/Math.tan((i-leftAnalyser.minDecibels)/(leftAnalyser.maxDecibels-leftAnalyser.minDecibels) > 0.5 ? -Math.PI/180*(45+(i-leftAnalyser.minDecibels)/(leftAnalyser.maxDecibels-leftAnalyser.minDecibels)*90) : Math.PI/180*(45+(i-leftAnalyser.minDecibels)/(leftAnalyser.maxDecibels-leftAnalyser.minDecibels)*90)), this.arrowsLength);
+          ctx.stroke();
+          //ctx.arc(leftArrowStartCoordinates[0], leftArrowStartCoordinates[1], this.arrowsLength*0.95, Math.PI/180*(-135+((i-leftAnalyser.minDecibels)/(leftAnalyser.maxDecibels-leftAnalyser.minDecibels)*90)), Math.PI/180*(-135+((i-leftAnalyser.minDecibels)/(leftAnalyser.maxDecibels-leftAnalyser.minDecibels)*90)+0.75));
+
+          ctx.beginPath();
+          ctx.moveTo(c.width/2-rightArrowStartCoordinates[0]+(this.arrowsLength*0.5-c.width/4)/Math.tan((i-leftAnalyser.minDecibels)/(leftAnalyser.maxDecibels-leftAnalyser.minDecibels) > 0.5 ? -Math.PI/180*(45+(i-leftAnalyser.minDecibels)/(leftAnalyser.maxDecibels-leftAnalyser.minDecibels)*90) : Math.PI/180*(45+(i-leftAnalyser.minDecibels)/(leftAnalyser.maxDecibels-leftAnalyser.minDecibels)*90)), this.arrowsLength*0.5);
+          ctx.lineTo(c.width/2-rightArrowStartCoordinates[0]+(this.arrowsLength-c.width/4)/Math.tan((i-leftAnalyser.minDecibels)/(leftAnalyser.maxDecibels-leftAnalyser.minDecibels) > 0.5 ? -Math.PI/180*(45+(i-leftAnalyser.minDecibels)/(leftAnalyser.maxDecibels-leftAnalyser.minDecibels)*90) : Math.PI/180*(45+(i-leftAnalyser.minDecibels)/(leftAnalyser.maxDecibels-leftAnalyser.minDecibels)*90)), this.arrowsLength);
+          ctx.stroke();
+          ctx.fillText(i, leftArrowStartCoordinates[0]+this.arrowsLength*1.05*Math.cos(Math.PI/180*(-135+((i-leftAnalyser.minDecibels)/(leftAnalyser.maxDecibels-leftAnalyser.minDecibels)*90))), leftArrowStartCoordinates[1]+this.arrowsLength*1.05*Math.sin(Math.PI/180*(-135+((i-leftAnalyser.minDecibels)/(leftAnalyser.maxDecibels-leftAnalyser.minDecibels)*90))));
+          ctx.fillText(i, rightArrowStartCoordinates[0]+this.arrowsLength*1.05*Math.cos(Math.PI/180*(-135+((i-leftAnalyser.minDecibels)/(leftAnalyser.maxDecibels-leftAnalyser.minDecibels)*90))), rightArrowStartCoordinates[1]+this.arrowsLength*1.05*Math.sin(Math.PI/180*(-135+((i-leftAnalyser.minDecibels)/(leftAnalyser.maxDecibels-leftAnalyser.minDecibels)*90))));
+        }
+      } */
+/*       ctx.strokeStyle = "#f668";
+      ctx.lineWidth = c.width/512;
+
+      for (let i = 0; i < this.lastValues.length; i++) {
+        let leftArrowEndCoordinates1 = [leftArrowStartCoordinates[0]-this.arrowsLength*Math.cos(this.lastValues[i][0]/255 > 0.5 ? -Math.PI/180*(45+this.lastValues[i][0]/255*90) : Math.PI/180*(45+this.lastValues[i][0]/255*90)), leftArrowStartCoordinates[1]-this.arrowsLength*Math.sin(Math.PI/180*(45+this.lastValues[i][0]/255*90))];
+        let rightArrowEndCoordinates1 = [rightArrowStartCoordinates[0]-this.arrowsLength*Math.cos(this.lastValues[i][1]/255 > 0.5 ? -Math.PI/180*(45+this.lastValues[i][1]/255*90) : Math.PI/180*(45+this.lastValues[i][1]/255*90)), rightArrowStartCoordinates[1]-this.arrowsLength*Math.sin(Math.PI/180*(45+this.lastValues[i][1]/255*90))];
+        ctx.beginPath();
+        ctx.moveTo(leftArrowStartCoordinates[0], leftArrowStartCoordinates[1]);
+        ctx.lineTo(leftArrowEndCoordinates1[0], leftArrowEndCoordinates1[1]);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(rightArrowStartCoordinates[0], rightArrowStartCoordinates[1]);
+        ctx.lineTo(rightArrowEndCoordinates1[0], rightArrowEndCoordinates1[1]);
+        ctx.stroke();
+      } */
+      if(this.settings.arrowShadows.value) {
+        ctx.filter = `blur(${c.width/1024}px)`;
+        ctx.strokeStyle = `#0004`;/* ${Math.round(15-(Math.abs(this.lastValues[0][0]-this.leftValue)/255*15)).toString(16)} */
+        ctx.lineWidth = c.width/512;
+        
+        ctx.beginPath();
+        ctx.moveTo(leftArrowStartCoordinates[0]+c.width/256, leftArrowStartCoordinates[1]+c.width/128);
+        ctx.lineTo(leftArrowEndCoordinates[0]+c.width/256, leftArrowEndCoordinates[1]+c.width/128);
+        ctx.stroke();
+
+        ctx.strokeStyle = `#0004`;/* ${Math.round(15-(Math.abs(this.lastValues[0][1]-this.rightValue)/255*15)).toString(16)} */
+
+        ctx.beginPath();
+        ctx.moveTo(rightArrowStartCoordinates[0]+c.width/256, rightArrowStartCoordinates[1]+c.width/128);
+        ctx.lineTo(rightArrowEndCoordinates[0]+c.width/256, rightArrowEndCoordinates[1]+c.width/128);
+        ctx.stroke();
+
+        ctx.filter = `none`;
+      }
+      ctx.strokeStyle = `#f66`;/* ${Math.round(15-(Math.abs(this.lastValues[0][0]-this.leftValue)/255*15)).toString(16)} */
+      ctx.lineWidth = c.width/512;
+
+      ctx.beginPath();
+      ctx.moveTo(leftArrowStartCoordinates[0], leftArrowStartCoordinates[1]);
+      ctx.lineTo(leftArrowEndCoordinates[0], leftArrowEndCoordinates[1]);
+      ctx.stroke();
+
+      ctx.strokeStyle = `#f66`;/* ${Math.round(15-(Math.abs(this.lastValues[0][1]-this.rightValue)/255*15)).toString(16)} */
+
+      ctx.beginPath();
+      ctx.moveTo(rightArrowStartCoordinates[0], rightArrowStartCoordinates[1]);
+      ctx.lineTo(rightArrowEndCoordinates[0], rightArrowEndCoordinates[1]);
+      ctx.stroke();
+
+      //ctx.filter = `blur(${c.width/1024}px)`;
+      //ctx.filter = `none`;
+      if (this.renderedFrontFrameImage) {
+        ctx.drawImage(this.renderedFrontFrameImage,0,0,c.width,c.height);
+      }
+      //ctx.fillRect(c.width/2, c.height/2-arrowsLength*1, arrowsLength*2, arrowsLength*2, c.width/128);
+/*       ctx.textBaseline = 'top';
+      ctx.font = `bold ${c.width/96}px monospace`;
+      ctx.fillStyle = '#fff';
+      ctx.textAlign = 'right';
+      ctx.fillText(`${Math.floor(this.frameRate)} FPS`, c.width/4, c.width/48);
+      ctx.fillText(`${Math.floor(time_delta)} ms`, c.width/4, c.width/24);
+      ctx.textBaseline = 'alphabetic'; */
+    },
+    end: function() {
+      leftAnalyser.smoothingTimeConstant = this.leftAnalysersmoothingTimeConstant;
+      rightAnalyser.smoothingTimeConstant = this.rightAnalysersmoothingTimeConstant;
+      recordLeftAnalyser.smoothingTimeConstant = this.recordLeftAnalysersmoothingTimeConstant;
+      recordRightAnalyser.smoothingTimeConstant = this.recordRightAnalysersmoothingTimeConstant;
+      inputLeftAnalyser.smoothingTimeConstant = this.inputLeftAnalysersmoothingTimeConstant;
+      inputRightAnalyser.smoothingTimeConstant = this.inputRightAnalysersmoothingTimeConstant;
+    }
+  }
+];
+
+let visualizationsSettings = [];
+if(localStorage.getItem('visualizationsSettings') == null) {
+
+for(let i = 0 ; i < visualizationsList.length; i++) {
+  if(visualizationsList[i].settings && Object.keys(visualizationsList[i].settings).length > 0) {
+    //visualizationsSettings[i] = visualizationsList[i].settings;
+    visualizationsSettings[i] = {};
+    for (let visSet in visualizationsList[i].settings) {
+      visualizationsSettings[i][visSet] = visualizationsList[i].settings[visSet].value;
+    }
+  } else {
+    visualizationsSettings[i] = {};
+  }
+}
+
+localStorage.setItem('visualizationsSettings', JSON.stringify(visualizationsSettings));
+
+} else {
+visualizationsSettings = JSON.parse(localStorage.getItem('visualizationsSettings'));
+for(let i = 0; i < visualizationsList.length; i++) {
+  if(visualizationsSettings[i] && Object.keys(visualizationsSettings[i]).length > 0) {
+    //visualizationsList[i].settings = visualizationsSettings[i];
+    for (let visSet in visualizationsSettings[i]) {
+      visualizationsList[i].settings[visSet].value = visualizationsSettings[i][visSet];
+    }
+  }
+}
+}
+
+
+function prevVisualization() {
+  visualizationsList[currentVis].end();
+  clearInterval(spectrogramInterval1);
+  currentVis--;
+  if(currentVis < 0) {currentVis = visualizationsList.length-1}
+  visualizationsList[currentVis].init(spectrogramCtx, spectrocanvas);
+  spectrogramInterval1 = setInterval(function(){
+    visualizationsList[currentVis].render(spectrogramCtx, spectrocanvas);
+  });
+}
+function nextVisualization() {
+  visualizationsList[currentVis].end();
+  clearInterval(spectrogramInterval1);
+  currentVis++;
+  if(currentVis >= visualizationsList.length) {currentVis = 0}
+  visualizationsList[currentVis].init(spectrogramCtx, spectrocanvas);
+  spectrogramInterval1 = setInterval(function(){
+    visualizationsList[currentVis].render(spectrogramCtx, spectrocanvas);
+  });
+}
+
+let currentVis = 0;
 
 let spectrogramWindow = null;
 let spectrogramInterval1 = null;
@@ -6360,78 +7113,81 @@ document.getElementById('openSpectrogram').addEventListener('click', function() 
     // If window is already open, close it
     spectrogramWindow.close();
     spectrogramWindow = null;
-    analyser.minDecibels = analyserSettings[0];
-    analyser.maxDecibels = analyserSettings[1];
-    analyser.smoothingTimeConstant = analyserSettings[2];
-
-    recordAnalyser.minDecibels = analyserSettings[0];
-    recordAnalyser.maxDecibels = analyserSettings[1];
-    recordAnalyser.smoothingTimeConstant = analyserSettings[2];
-
-    inputAnalyser.minDecibels = analyserSettings[0];
-    inputAnalyser.maxDecibels = analyserSettings[1];
-    inputAnalyser.smoothingTimeConstant = analyserSettings[2];
-    //if(globalSettings.disableSpectrumWhenSpectrogramOn) {
+    visualizationsList[currentVis].end();
+    clearInterval(spectrogramInterval1);
+    clearInterval(updateAnalyserValuesInterval);
+    clearInterval(updateSpectrumInterval);
+    updateSpectrumInterval = setInterval(updateSpectrum, (globalSettings.analyserFps*50)||1);
+/*     //if(globalSettings.disableSpectrumWhenSpectrogramOn) {
       clearInterval(updateAnalyserValuesInterval);
       clearInterval(updateSpectrumInterval);
       updateSpectrumInterval = setInterval(updateSpectrum, (globalSettings.analyserFps*50)||1);
-    //}
+    //} */
   } else {
     // Open spectrogram window
     //equalizerWindow = window.open('data:text/html,<!DOCTYPE html><html><head></head><body></body></html>', 'Equalizer', 'width=640,height=400,scrollbars=yes,resizable=yes');
     //equalizerWindow.document.write('<!DOCTYPE HTML><html></html>');
-    analyser.minDecibels = -100;
-    analyser.maxDecibels = 0;
-    analyser.smoothingTimeConstant = 0;
-
-    inputAnalyser.minDecibels = -100;
-    inputAnalyser.maxDecibels = 0;
-    inputAnalyser.smoothingTimeConstant = 0;
-
-    recordAnalyser.minDecibels = -100;
-    recordAnalyser.maxDecibels = 0;
-    recordAnalyser.smoothingTimeConstant = 0;
+    
     // Add code
-    let iHTML = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Spectrogram</title>
+    let iHTML = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Visualization</title>
 <style>
       body, html {
 margin:0;padding:0;overflow:hidden;background:#000;
     }
-    
       #spectrogramCanvas{width:100vw;height:100vh;}
+      #visualizationControls{
+position: absolute;
+left: calc(100vw - 128px);
+top: calc(100vh - 32px);
+opacity:0;
+display: flex;
+flex-wrap: nowrap;
+flex-direction: row;
+width:128px;
+height:32px;
+}
+      #visualizationControls:hover{opacity:1}
+      #visualizationControls button {
+        border: #888a px solid;
+        outline: none;
+        margin: 0;
+        width: 64px;
+        height: 32px;
+        font-family: monospace;
+        font-size: 12px;
+        color: #888;
+        background: #8886;
+        display: block;
+      }
+/*
+*{outline: #f00 1px solid !important; opacity:1 !important;}
+*/
 </style></head><body>
 <canvas id="spectrogramCanvas" width=1024 height=512></canvas>
 </body></html>`;
 let blob = new Blob([iHTML], { type: 'text/html'});
 let url = window.URL.createObjectURL(blob);
-spectrogramWindow = window.open('', 'Spectrogram', 'width=1024,height=512,scrollbars=yes,resizable=yes');
+spectrogramWindow = window.open('', 'Visualization', 'width=1024,height=512,scrollbars=yes,resizable=yes');
 spectrogramWindow.document.write(iHTML);
-spectrogramWindow.document.title = 'Spectrogram';
+spectrogramWindow.document.title = 'Visualization';
 spectrocanvas = spectrogramWindow.spectrogramCanvas;
 spectrogramCtx = spectrocanvas.getContext('2d');
-
-let spectrogramImg = spectrogramCtx.getImageData(0, 0, spectrocanvas.width, spectrocanvas.height);
-let spg_d = audio.currentTime;
-spectrogramInterval1 = setInterval(function(){
-spectrogramImg = spectrogramCtx.getImageData(0, 0, spectrocanvas.width, spectrocanvas.height);
-spectrogramCtx.fillStyle = '#000';
-spectrogramCtx.fillRect(0,0,spectrocanvas.width,spectrocanvas.height);
-let analyserArr = Array.from(analyserDataArray);
-for(let i=0;i<analyserArr.length;i++){
-spectrogramCtx.fillStyle = `hsl(${240-analyserArr[i]/255*240}deg, 100%, ${analyserArr[i]/255*50}%)`;
-spectrogramCtx.fillRect(0, spectrocanvas.height-i, 1, 1);
-if(Math.round(i*24000/511) % 1000 < 24000/511) {
-  spectrogramCtx.fillStyle = '#fff8';
-  spectrogramCtx.fillRect(0,spectrocanvas.height-i,1,1);
-}
-};
-if(Math.abs(audio.currentTime - spg_d) >= 1) {
-  spg_d = audio.currentTime;
-  spectrogramCtx.fillStyle = '#fff8';
-  spectrogramCtx.fillRect(0,0,1,spectrocanvas.height);
-}
-spectrogramCtx.putImageData(spectrogramImg, 1, 0);
-});
+let visualizationControls = spectrogramWindow.document.createElement('div');
+visualizationControls.id = 'visualizationControls';
+spectrogramWindow.document.body.append(visualizationControls);
+let prevVisBtn = spectrogramWindow.document.createElement('button');
+prevVisBtn.innerHTML = 'PREV';
+prevVisBtn.onclick = prevVisualization;
+let nextVisBtn = spectrogramWindow.document.createElement('button');
+nextVisBtn.innerHTML = 'NEXT';
+nextVisBtn.onclick = nextVisualization;
+visualizationControls.append(prevVisBtn);
+visualizationControls.append(nextVisBtn);
+    visualizationsList[currentVis].init(spectrogramCtx, spectrocanvas);
+    
+    spectrogramInterval1 = setInterval(function(){
+      visualizationsList[currentVis].render(spectrogramCtx, spectrocanvas);
+    });
 /* let spectrogramInterval2 = setInterval(function() {
   let oldFill = spectrogramCtx.fillStyle;
   spectrogramCtx.fillStyle = '#fff8';
@@ -6449,21 +7205,20 @@ spectrogramCtx.putImageData(spectrogramImg, 1, 0);
     }
     // Focus the spectrogram window
     spectrogramWindow.focus();
-
+    spectrogramWindow.addEventListener('resize', () => {
+      spectrocanvas.width = spectrogramWindow.innerWidth;
+      spectrocanvas.height = spectrogramWindow.innerHeight;
+      if(visualizationsList[currentVis].onresize) {
+        if(typeof visualizationsList[currentVis].onresize == 'function') {
+            visualizationsList[currentVis].onresize(spectrogramCtx, spectrocanvas);
+            console.log(`onresize size: ${spectrocanvas.width}x${spectrocanvas.height}`);
+        }
+      };
+    });
     // When spectrogram window is closed manually, reset variable
     spectrogramWindow.onbeforeunload = function() {
       spectrogramWindow = null;
-      analyser.minDecibels = analyserSettings[0];
-      analyser.maxDecibels = analyserSettings[1];
-      analyser.smoothingTimeConstant = analyserSettings[2];
- 
-      recordAnalyser.minDecibels = analyserSettings[0];
-      recordAnalyser.maxDecibels = analyserSettings[1];
-      recordAnalyser.smoothingTimeConstant = analyserSettings[2];
- 
-      inputAnalyser.minDecibels = analyserSettings[0];
-      inputAnalyser.maxDecibels = analyserSettings[1];
-      inputAnalyser.smoothingTimeConstant = analyserSettings[2];
+      visualizationsList[currentVis].end();
       //clearInterval(spectrogramInterval2)
       clearInterval(spectrogramInterval1);
       //if(globalSettings.disableSpectrumWhenSpectrogramOn) {
@@ -7115,6 +7870,7 @@ outline:none;
 <div class="settingsTab">MIDI</div>
 <div class="settingsTab">Interface</div>
 <div class="settingsTab">Effects</div>
+<div class="settingsTab">Visualizations</div>
 <div class="settingsTab">Debug</div>
 </div>
 
@@ -7202,6 +7958,8 @@ VHS
 <div class="settingsContent">
   <label for="multiJogFunctionSelect">Multi jog function: </label><select id="multiJogFunctionSelect"></select>
   <br>
+  <label for="multiJogShiftFunctionSelect">When Shift is held: </label><select id="multiJogShiftFunctionSelect"></select>
+  <br>
   <label for="analyserMonitorModeSelect">Analyser monitor mode: </label><select id="analyserMonitorModeSelect">
     <option value="0">Source</option>
     <option value="1">Record</option>
@@ -7210,7 +7968,7 @@ VHS
   <br>
   <input type="checkbox" id="displayVolumeOnSpectrumCheckbox"><label for="displayVolumeOnSpectrumCheckbox">Display volume on spectrum</label>
   <br>
-  <input type="checkbox" id="disableSpectrumWhenSpectrogramOnCheckbox"><label for="disableSpectrumWhenSpectrogramOnCheckbox">Disable spectrum when spectrogram is displayed</label>
+  <input type="checkbox" id="disableSpectrumWhenSpectrogramOnCheckbox"><label for="disableSpectrumWhenSpectrogramOnCheckbox">Disable spectrum when visualization window is open</label>
   <br>
   <input type="checkbox" id="enableVideoAnalyserMode"><label for="enableVideoAnalyserMode">Add video as spectrum mode</label>
   <br>
@@ -7230,6 +7988,11 @@ VHS
 <input type="checkbox" id="enableStereoEnhancer"><label for="enableStereoEnhancer">Stereo enhancer</label><br>
 <label for="enhancerDelayInput">Enhancer delay (negative - left channel, positive - right channel): </label><br><input type="number" id="enhancerDelayInput" value="-0.0025" step="0.00005"><label for="enhancerDelayInput"> seconds</label><br><br>
 
+</div>
+<div class="settingsContent">
+<div id="visualizationsSettings">
+
+</div>
 </div>
 <div class="settingsContent">
 <label for="errorsTextarea">Errors</label><br>
@@ -7380,6 +8143,11 @@ settingsWindow.document.getElementById('compRelease').addEventListener('input', 
   multiJogFuncOption.value = mutiJogFuncIndex;
   multiJogFuncOption.textContent = multiJogFunctionList[mutiJogFuncIndex].name;
   settingsWindow.multiJogFunctionSelect.append(multiJogFuncOption);
+
+  let multiJogShiftFuncOption = document.createElement('option');
+  multiJogShiftFuncOption.value = mutiJogFuncIndex;
+  multiJogShiftFuncOption.textContent = multiJogFunctionList[mutiJogFuncIndex].name;
+  settingsWindow.multiJogShiftFunctionSelect.append(multiJogShiftFuncOption);
 }
 function getSelectedMultiJogFunction(event) {
   localStorage.setItem('multiJogFunction', this.value);
@@ -7390,6 +8158,16 @@ function getSelectedMultiJogFunction(event) {
 };
 settingsWindow.multiJogFunctionSelect.querySelector(`option[value="${globalSettings.multiJogFunction}"]`).setAttribute('selected', 'true');
 settingsWindow.multiJogFunctionSelect.addEventListener('input', getSelectedMultiJogFunction);
+
+function getSelectedMultiJogShiftFunction(event) {
+  localStorage.setItem('multiJogShiftFunction', this.value);
+  this.setAttribute('selected', 'true');
+  globalSettings.multiJogShiftFunction = this.value;
+  multiJogShiftFwdAction = multiJogFunctionList[globalSettings.multiJogShiftFunction].fwdAction;
+  multiJogShiftRevAction = multiJogFunctionList[globalSettings.multiJogShiftFunction].revAction;
+};
+settingsWindow.multiJogShiftFunctionSelect.querySelector(`option[value="${globalSettings.multiJogShiftFunction}"]`).setAttribute('selected', 'true');
+settingsWindow.multiJogShiftFunctionSelect.addEventListener('input', getSelectedMultiJogShiftFunction);
 
 settingsWindow.document.getElementById('oscillatorType').querySelector(`option[value="${globalSettings.midiOscillatorType}"]`).setAttribute('selected', 'true');
     settingsWindow.document.getElementById('oscillatorType').addEventListener('input', getSelectedOscType);
@@ -7600,6 +8378,59 @@ settingsWindow.skipDisplayUnsupportedSymbolsCheckbox.oninput = () => {
   globalSettings.skipDisplayUnsupportedSymbols = settingsWindow.skipDisplayUnsupportedSymbolsCheckbox.checked;
   localStorage.setItem('skipDisplayUnsupportedSymbols', String(Number(globalSettings.skipDisplayUnsupportedSymbols)));
   updateTitleBar();
+}
+
+for(let i = 0 ; i < visualizationsList.length; i++) {
+  if(visualizationsList[i].settings && Object.keys(visualizationsList[i].settings).length > 0) {
+    //visualizationsList[i].settings = visualizationsSettings[i];
+    settingsWindow.document.body.querySelector('#visualizationsSettings').insertAdjacentHTML('beforeend',`<div class="visualization${i}settings"><p>${visualizationsList[i].name}</p></div>`);
+    for(let visSet in visualizationsList[i].settings) {
+      //console.log(i, visSet, visualizationsList[i].settings[visSet].name, visualizationsList[i].settings[visSet].type);
+      if(visualizationsList[i].settings[visSet].type == 'number') {
+        settingsWindow.document.body.querySelector('#visualizationsSettings').querySelector(`.visualization${i}settings`).insertAdjacentHTML('beforeend', `<label class="visSet${visSet}">${visualizationsList[i].settings[visSet].name} <input type="number"></label><br>`);
+        let settingInput = settingsWindow.document.body.querySelector('#visualizationsSettings').querySelector(`.visualization${i}settings`).querySelector(`.visSet${visSet}`).querySelector(`input`);
+        let settingLabel = settingsWindow.document.body.querySelector('#visualizationsSettings').querySelector(`.visualization${i}settings`).querySelector(`.visSet${visSet}`);
+        settingInput.value = visualizationsList[i].settings[visSet].value;
+        settingInput.oninput = () => {
+          visualizationsList[i].settings[visSet].value = visualizationsSettings[i][visSet] = Number(settingInput.value);
+          localStorage.setItem('visualizationsSettings', JSON.stringify(visualizationsSettings));
+        };
+
+
+        //settingsWindow.document.querySelector('#visualizationsSettings').innerHTML += `<label>${visualizationsList[i].settings[visSet].name} <input type="number" oninput="window.opener.visualizationsList" value></label>`;
+      } else if(visualizationsList[i].settings[visSet].type == 'string') {
+        settingsWindow.document.body.querySelector('#visualizationsSettings').querySelector(`.visualization${i}settings`).insertAdjacentHTML('beforeend', `<label class="visSet${visSet}">${visualizationsList[i].settings[visSet].name} <input type="text"></label><br>`);
+        let settingInput = settingsWindow.document.body.querySelector('#visualizationsSettings').querySelector(`.visualization${i}settings`).querySelector(`.visSet${visSet}`).querySelector(`input`);
+        let settingLabel = settingsWindow.document.body.querySelector('#visualizationsSettings').querySelector(`.visualization${i}settings`).querySelector(`.visSet${visSet}`);
+        settingInput.value = visualizationsList[i].settings[visSet].value;
+        settingInput.oninput = () => {
+          visualizationsList[i].settings[visSet].value = visualizationsSettings[i][visSet] = settingInput.value;
+          localStorage.setItem('visualizationsSettings', JSON.stringify(visualizationsSettings));
+        };
+      } else if(visualizationsList[i].settings[visSet].type == 'select') {
+        settingsWindow.document.body.querySelector('#visualizationsSettings').querySelector(`.visualization${i}settings`).insertAdjacentHTML('beforeend', `<label class="visSet${visSet}">${visualizationsList[i].settings[visSet].name} <select></select></label><br>`);
+        let settingInput = settingsWindow.document.body.querySelector('#visualizationsSettings').querySelector(`.visualization${i}settings`).querySelector(`.visSet${visSet}`).querySelector(`select`);
+        for (let option in visualizationsList[i].settings[visSet].options) {
+          settingInput.insertAdjacentHTML('beforeend', `<option value="${option}">${visualizationsList[i].settings[visSet].options[option]}</option>`);
+        }
+        let settingLabel = settingsWindow.document.body.querySelector('#visualizationsSettings').querySelector(`.visualization${i}settings`).querySelector(`.visSet${visSet}`);
+        settingInput.value = visualizationsList[i].settings[visSet].value;
+        settingInput.oninput = () => {
+          visualizationsList[i].settings[visSet].value = visualizationsSettings[i][visSet] = String(settingInput.value);
+          localStorage.setItem('visualizationsSettings', JSON.stringify(visualizationsSettings));
+        };
+      } else if(visualizationsList[i].settings[visSet].type == 'checkbox') {
+        settingsWindow.document.body.querySelector('#visualizationsSettings').querySelector(`.visualization${i}settings`).insertAdjacentHTML('beforeend', `<label class="visSet${visSet}"><input type="checkbox"> ${visualizationsList[i].settings[visSet].name}</label><br>`);
+        let settingInput = settingsWindow.document.body.querySelector('#visualizationsSettings').querySelector(`.visualization${i}settings`).querySelector(`.visSet${visSet}`).querySelector(`input`);
+        let settingLabel = settingsWindow.document.body.querySelector('#visualizationsSettings').querySelector(`.visualization${i}settings`).querySelector(`.visSet${visSet}`);
+        settingInput.checked = visualizationsList[i].settings[visSet].value;
+        settingInput.oninput = () => {
+          visualizationsList[i].settings[visSet].value = visualizationsSettings[i][visSet] = Number(settingInput.checked);
+          localStorage.setItem('visualizationsSettings', JSON.stringify(visualizationsSettings));
+        };
+      }
+    }
+  }
 }
 
 
