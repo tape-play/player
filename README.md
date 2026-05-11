@@ -12,7 +12,7 @@ Features:
 - Different timer modes: consumed, remaining, duration and record, which can be displayed as min:sec, seconds or x10 sec
 - Visualizer with NORMAL (spectrum), BASS (shows bass level), LEVEL (shows audio volume level), stereo VU meter and stereo difference modes with ability to set minimum and maximum levels
 - Timer and visualizer in favicon
-- Some visualizations, in a separate window
+- Some visualizations, in a separate window (hover bottom right corner ov visualization window to show prev/next buttons)
 - Touch-compatible knobs. MULTI JOG can be assigned as volume or rewind/fast forward knob
 - Media metadata parser and viewer. Currently supported formats: MP3, MP4, M4A, FLAC, Ogg, Opus
 - And something else
