@@ -17,4 +17,4 @@ Features:
 - Media metadata parser and viewer. Currently supported formats: MP3, MP4, M4A, FLAC, Ogg, Opus
 - And something else
 
-v1.3 (10.05.2026)
+v1.4 (04.08.2026)
